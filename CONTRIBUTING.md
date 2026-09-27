@@ -106,9 +106,17 @@ VS Code and every terminal can use them. What differs per terminal is the color 
 **Next (v0.2.0): pick your phosphor color**
 
 Some 80-column cards and monitors let you choose the text color. Retro Looks will too. Every
-monochrome look gets one **phosphor color**: a preset (green, amber, white, cyan or yellow) or any
-custom RGB color. One choice colors both VS Code and the Windows Terminal profile
-(`install.ps1 -Phosphor …` for Terminal-only users).
+monochrome look gets a **phosphor color**: a preset (green, amber, white, cyan or yellow) or any
+custom RGB color.
+- **VS Code:** choosing a monochrome look asks for its color; **Retro: Set Phosphor Color…** changes
+  it later. Each look remembers its own color. This never touches Windows Terminal.
+- **Windows Terminal:** a `Set-RetroColor` command (alias `color`, like DOS) recolors the current
+  tab only, so an amber and a green Apple //e can run side by side. It takes presets, RGB
+  (`color '#40E0FF'`) and DOS codes (`color 0A`, `color 1F`); `color` alone goes back to the
+  profile's default. `-SetAsDefault` also makes the color the default for new tabs of that profile
+  (saved in `%LOCALAPPDATA%\RetroLooks\colors.json`, so it survives updates; duplicated profiles
+  get instructions instead, since their settings live in the user's own `settings.json`).
+  Preset color schemes ship with the profiles for anyone who prefers picking one in Settings.
 - **Apple //e** becomes a single monochrome look (default green) instead of separate Green and Amber looks.
 - **IBM PS/2 monochrome** (Windows Terminal), default white: like the IBM 8503 monochrome VGA display,
   where the 16 VGA colors show as 16 shades of the phosphor color by brightness.
