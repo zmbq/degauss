@@ -1,14 +1,9 @@
-# Releases
+# Changelogs
 
-Each release on GitHub contains both parts of Retro Looks. They have their own version numbers and
-changelogs, so a part that didn't change keeps its version:
+Retro Looks is two products, each with its own version, changelog and Git tag:
 
-- VS Code extension: [vscode/CHANGELOG.md](vscode/CHANGELOG.md)
-- PowerShell module for Windows Terminal: [powershell/CHANGELOG.md](powershell/CHANGELOG.md)
+- VS Code extension: [vscode/CHANGELOG.md](vscode/CHANGELOG.md), tagged `vscode-v1.2.3`
+- PowerShell module for Windows Terminal: [powershell/CHANGELOG.md](powershell/CHANGELOG.md), tagged
+  `powershell-v1.2.3`
 
-| Release | VS Code extension | PowerShell module |
-|---|---|---|
-| v0.2.1 | 0.2.1 (unchanged) | 0.2.1 |
-| v0.2.0 | 0.2.0 | 0.2.0 |
-| v0.1.1 | 0.1.1 | 0.1.1 (install.ps1) |
-| v0.1.0 | 0.1.0 | 0.1.0 (install.ps1) |
+Releases up to v0.2.1 were tagged `v0.x.y` and contained both products.

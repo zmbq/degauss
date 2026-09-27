@@ -3,8 +3,8 @@
 //   vscode/package.json                   "contributes" section (themes + commands) is rewritten
 //   dist/powershell/ + dist/retro-looks-powershell.zip (+ .sha256)
 //                                         the RetroLooks PowerShell module (Windows Terminal) and its installer
-// Each product has its own version: vscode/package.json and powershell/RetroLooks/RetroLooks.psd1. The root
-// package.json's version is the release number (the Git tag), shared by both. Usage: node tools/build.mjs
+// Each product has its own version (vscode/package.json, powershell/RetroLooks/RetroLooks.psd1) and is
+// released on its own tag (vscode-v1.2.3, powershell-v1.2.3). Usage: node tools/build.mjs
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -265,12 +265,10 @@ function buildPowerShell(looks, fonts) {
   return version;
 }
 
-const release = readJson(p('package.json')).version;
-if (!/^\d+\.\d+\.\d+$/.test(release ?? '')) throw new Error('package.json needs a "version" (the release number) like 1.2.3');
 const fonts = loadFonts();
 const looks = loadLooks(fonts);
 const extensionVersion = buildVscode(looks, fonts);
 const moduleVersion = buildPowerShell(looks, fonts);
 const describe = (l) => (l.vscode ? l.name : `${l.name} [Terminal only]`);
 console.log(`Built ${looks.length} looks (${looks.map(describe).join(', ')}), ${Object.keys(fonts).length} fonts.`);
-console.log(`Release ${release}: VS Code extension ${extensionVersion}, PowerShell module ${moduleVersion}.`);
+console.log(`VS Code extension ${extensionVersion}, PowerShell module ${moduleVersion}.`);

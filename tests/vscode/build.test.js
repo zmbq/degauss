@@ -9,7 +9,6 @@ const root = path.join(__dirname, '..', '..');
 const read = (...parts) => JSON.parse(fs.readFileSync(path.join(root, ...parts), 'utf8'));
 const exists = (...parts) => fs.existsSync(path.join(root, ...parts));
 
-const version = read('package.json').version;
 const looks = fs.readdirSync(path.join(root, 'looks')).map((id) => ({ id, ...read('looks', id, 'look.json') }));
 const pkg = read('vscode', 'package.json');
 const generatedLooks = read('vscode', 'generated', 'looks.json');
@@ -18,7 +17,6 @@ const fragment = read(...moduleDir, 'retro-looks.json');
 
 test('each product has its own version, with a changelog entry for it', () => {
   const semver = /^\d+\.\d+\.\d+$/;
-  assert.match(version, semver, 'the release number (root package.json)');
   assert.match(pkg.version, semver, 'the extension version (vscode/package.json)');
   const manifest = fs.readFileSync(path.join(root, 'powershell', 'RetroLooks', 'RetroLooks.psd1'), 'utf8');
   const moduleVersion = manifest.match(/ModuleVersion\s*=\s*'([^']+)'/)?.[1];
@@ -28,7 +26,6 @@ test('each product has its own version, with a changelog entry for it', () => {
   const hasEntry = (file, v) => fs.readFileSync(path.join(root, file), 'utf8').includes(`\n## ${v}`);
   assert(hasEntry('vscode/CHANGELOG.md', pkg.version), `vscode/CHANGELOG.md has a ## ${pkg.version} entry`);
   assert(hasEntry('powershell/CHANGELOG.md', moduleVersion), `powershell/CHANGELOG.md has a ## ${moduleVersion} entry`);
-  assert(fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8').includes(`| v${version} | ${pkg.version}`), `CHANGELOG.md lists release v${version}`);
   assert(exists(...moduleDir, 'CHANGELOG.md'), 'the module ships its changelog');
 });
 

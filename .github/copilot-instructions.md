@@ -19,6 +19,6 @@ Key points, in case AGENTS.md isn't loaded:
   `%LOCALAPPDATA%\RetroLooks\font-users`; fonts are removed only when no marker is left.
 - Never edit `vscode/generated/` or the `contributes` of `vscode/package.json`; run the build.
 - Each product has its own version and changelog (`vscode/package.json` + `vscode/CHANGELOG.md`,
-  `RetroLooks.psd1` + `powershell/CHANGELOG.md`); the root `package.json` version is the release number.
+  `RetroLooks.psd1` + `powershell/CHANGELOG.md`), released on its own tag (`vscode-v1.2.3`, `powershell-v1.2.3`).
 - Run `npm test` (and `tests/powershell/RetroLooks.tests.ps1` on Windows) before finishing; add tests for new behavior.
 - Be historically accurate, and ask rather than guess about how a machine really looked.

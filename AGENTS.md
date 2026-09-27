@@ -28,10 +28,11 @@ matching color schemes. People will often ask you to **add a new look** ("add a 
   `vscode/uninstall.js` (VS Code's `vscode:uninstall` hook) does the same when it's removed from the Extensions view.
 - **Versions:** each product has its own. The extension's is `version` in `vscode/package.json`, the
   module's is `ModuleVersion` in `powershell/RetroLooks/RetroLooks.psd1`, each with its own changelog
-  (`vscode/CHANGELOG.md`, `powershell/CHANGELOG.md`). The root `package.json` `version` is the release
-  number, the Git tag (`v1.2.3`); every release contains both products, and the stores skip versions they
-  already have. When a product changes, bump its version and add a changelog entry; for a release, bump
-  the release number and add a row to the table in the root `CHANGELOG.md`.
+  (`vscode/CHANGELOG.md`, `powershell/CHANGELOG.md`), and each is released on its own Git tag:
+  `vscode-v1.2.3` or `powershell-v1.2.3` (`.github/workflows/release.yml` checks the tag matches the
+  version and uses the changelog entry as the release notes). Module releases are GitHub's "latest"
+  release, because `install.ps1` downloads from it. When a product changes, bump its version and add a
+  changelog entry.
 - The PowerShell module repeats `vscode/palette.js`'s color math (`Get-PhosphorPalette` and friends in
   `RetroLooks.psm1`) to recolor tabs at runtime. Change both together; the PowerShell tests compare them
   color by color. Watch PowerShell's overload resolution: `[math]::Max(0, $x)` picks the integer overload.

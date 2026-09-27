@@ -1,6 +1,5 @@
 {
   "name": "vscode-retro-build",
-  "version": "0.2.1",
   "private": true,
   "description": "Build scripts and tests for Retro Looks: the VS Code extension (vscode/) and the PowerShell module for Windows Terminal (powershell/).",
   "scripts": {

@@ -9,6 +9,7 @@
 # Works on Windows PowerShell 5.1 and PowerShell 7.
 param(
     [switch]$Uninstall,
+    # The release tag to install, e.g. powershell-v0.2.2 (older releases: v0.2.1).
     [string]$Version = 'latest',
     # Use the profiles' nominal font sizes instead of the sharpest sizes for this display's scaling.
     [switch]$KeepFontSizes,

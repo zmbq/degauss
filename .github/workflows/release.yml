@@ -1,10 +1,13 @@
 name: Release
 
-# Push a tag like v0.2.1 (matching the root package.json "version", the release number) to publish a release.
-# Every release contains both products, each with its own version; the stores skip versions they already have.
+# Each product is released on its own tag, matching its own version:
+#   vscode-v1.2.3       the VS Code extension (vscode/package.json)
+#   powershell-v1.2.3   the RetroLooks PowerShell module (powershell/RetroLooks/RetroLooks.psd1)
+# Module releases are marked "latest", because the one-line installer downloads from
+# releases/latest; extension releases never are.
 on:
   push:
-    tags: ['v*']
+    tags: ['vscode-v*', 'powershell-v*']
 
 permissions:
   contents: write
@@ -25,31 +28,57 @@ jobs:
         with:
           node-version: 22
 
-      - name: Check tag matches the release number
+      - name: Check the tag matches the product's version
+        id: product
         run: |
-          version=$(node -p "require('./package.json').version")
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match package.json version $version"; exit 1
+          tag="$GITHUB_REF_NAME"
+          case "$tag" in
+            vscode-v*)
+              product=vscode; version=$(node -p "require('./vscode/package.json').version")
+              changelog=vscode/CHANGELOG.md; title="Retro Looks for VS Code $version" ;;
+            powershell-v*)
+              product=powershell; version=$(grep -oP "ModuleVersion\s*=\s*'\K[0-9.]+" powershell/RetroLooks/RetroLooks.psd1)
+              changelog=powershell/CHANGELOG.md; title="RetroLooks PowerShell module $version" ;;
+          esac
+          if [ "${tag#*-v}" != "$version" ]; then
+            echo "Tag $tag does not match the $product version $version"; exit 1
           fi
+          echo "product=$product" >> "$GITHUB_OUTPUT"
+          echo "changelog=$changelog" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "title=$title" >> "$GITHUB_OUTPUT"
 
       - run: node tools/build.mjs
       - run: npx --yes @vscode/vsce@3 package -o ../dist/
+        if: steps.product.outputs.product == 'vscode'
         working-directory: vscode
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          CHANGELOG: ${{ steps.product.outputs.changelog }}
+          VERSION: ${{ steps.product.outputs.version }}
+          TITLE: ${{ steps.product.outputs.title }}
+          PRODUCT: ${{ steps.product.outputs.product }}
         run: |
-          extension=$(node -p "require('./vscode/package.json').version")
-          module=$(grep -oP "ModuleVersion\s*=\s*'\K[0-9.]+" powershell/RetroLooks/RetroLooks.psd1)
-          notes="VS Code extension **$extension** ([changelog](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/vscode/CHANGELOG.md)), PowerShell module **$module** ([changelog](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/powershell/CHANGELOG.md))."
-          gh release create "$GITHUB_REF_NAME" --title "Retro Looks $GITHUB_REF_NAME" --notes "$notes" --generate-notes \
-            dist/*.vsix dist/retro-looks-powershell.zip dist/retro-looks-powershell.zip.sha256 powershell/install.ps1
+          # The release notes are the product's changelog entry for this version.
+          node -e '
+            const text = require("fs").readFileSync(process.env.CHANGELOG, "utf8");
+            const section = text.split(/^## /m).find((s) => s.startsWith(process.env.VERSION + "\n") || s.startsWith(process.env.VERSION + " "));
+            if (!section) { console.error("No ## " + process.env.VERSION + " entry in " + process.env.CHANGELOG); process.exit(1); }
+            require("fs").writeFileSync("release-notes.md", section.slice(section.indexOf("\n") + 1).trim() + "\n");
+          '
+          if [ "$PRODUCT" = vscode ]; then
+            gh release create "$GITHUB_REF_NAME" --title "$TITLE" --notes-file release-notes.md --latest=false dist/*.vsix
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$TITLE" --notes-file release-notes.md --latest \
+              dist/retro-looks-powershell.zip dist/retro-looks-powershell.zip.sha256 powershell/install.ps1
+          fi
 
       - name: Publish to VS Code Marketplace
-        if: env.VSCE_PAT != ''
+        if: steps.product.outputs.product == 'vscode' && env.VSCE_PAT != ''
         run: npx --yes @vscode/vsce@3 publish --skip-duplicate --packagePath dist/*.vsix -p "$VSCE_PAT"
 
       - name: Publish to Open VSX
-        if: env.OVSX_PAT != ''
+        if: steps.product.outputs.product == 'vscode' && env.OVSX_PAT != ''
         run: npx --yes ovsx publish --skip-duplicate dist/*.vsix -p "$OVSX_PAT"
