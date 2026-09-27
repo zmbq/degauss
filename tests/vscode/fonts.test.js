@@ -80,7 +80,7 @@ test('the uninstall hook removes the fonts unless the PowerShell module still us
   assert(!fs.existsSync(path.dirname(box.usersDir)), 'no Degauss folder left behind');
 });
 
-test('fonts installed before markers existed are adopted when the extension starts', windowsOnly, async (t) => {
+test('fonts that are already installed are adopted when the extension starts', windowsOnly, async (t) => {
   const box = useSandbox(t);
   const { createFakeVscode } = require('./helpers/fake-vscode');
   const fake = createFakeVscode();

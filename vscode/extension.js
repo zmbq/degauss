@@ -301,8 +301,8 @@ async function install() {
   if (choice === 'Quit VS Code') await vscode.commands.executeCommand('workbench.action.quit');
 }
 
-// Installations from before the markers existed: if the fonts are installed and the extension has no
-// marker yet, it adopts them, so uninstalling the other project won't remove them.
+// Fonts already installed by the PowerShell module: the extension never installs them itself, so it adds
+// its marker when it finds them, and uninstalling the module won't remove fonts the extension uses.
 async function adoptInstalledFonts() {
   if (!isWindows || fonts.hasMarker()) return;
   if (await allFontsInstalled()) fonts.addMarker(MARKER_DESCRIPTION());

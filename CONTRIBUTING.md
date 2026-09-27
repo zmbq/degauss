@@ -125,26 +125,7 @@ If you're not sure, say so in the PR, and someone who used one will know.
 Degauss is Windows-first. Fonts are installed for the whole system, so once they're installed,
 VS Code and every terminal can use them. What differs per terminal is the color schemes and profiles.
 
-**Next (v0.2.0): pick your phosphor color**
-
-Some 80-column cards and monitors let you choose the text color. Degauss will too. Every
-monochrome look gets a **phosphor color**: a preset (green, amber, white, cyan or yellow) or any
-custom RGB color.
-- **VS Code:** choosing a monochrome look asks for its color; **Degauss: Set Phosphor Color…** changes
-  it later. Each look remembers its own color. This never touches Windows Terminal.
-- **Windows Terminal:** `look` (`Set-DegaussLook`) switches the current tab to a look and `color`
-  (`Set-DegaussColor`, like DOS) recolors just that tab, so an amber and a green Apple //e can run side by
-  side. `color` takes presets, RGB (`color '#40E0FF'`) and DOS codes (`color 0A`, `color 1F`); `color`
-  alone goes back to the default. `-SetAsDefault` remembers a look's color, or the look `look` opens, in
-  `%LOCALAPPDATA%\Degauss\terminal.json`. The looks' profiles are hidden from Terminal's menu.
-- **Apple //e** becomes a single monochrome look (default green) instead of separate Green and Amber looks.
-- **IBM PS/2 monochrome** (Windows Terminal), default white: like the IBM 8503 monochrome VGA display,
-  where the 16 VGA colors show as 16 shades of the phosphor color by brightness.
-- **IBM 3270 monochrome**, default green: like the 3278 display, where ISPF's colors collapse into
-  two brightness levels, normal and intensified.
-- The color IBM 3270 (ISPF) look stays as it is.
-
-**Then (v0.3.0): macOS and Linux fonts and VS Code**
+**Next: macOS and Linux fonts and VS Code**
 - The extension installs, detects and uninstalls the fonts on macOS (`~/Library/Fonts`) and Linux
   (`~/.local/share/fonts` + `fc-cache`), with the same startup reminder as on Windows.
 - An `install.sh` (`curl … | sh`) installs just the fonts, for people who don't use VS Code.

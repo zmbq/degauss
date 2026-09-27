@@ -44,7 +44,7 @@ test('both projects install the same fonts under the same names', () => {
   }
 });
 
-test('the VS Code extension no longer ships Windows Terminal profiles', () => {
+test('the VS Code extension leaves Windows Terminal to the PowerShell module', () => {
   assert(!exists('vscode', 'generated', 'terminal'));
   assert(!pkg.contributes.commands.some((c) => /Terminal/.test(c.title)), 'no Terminal commands');
 });
