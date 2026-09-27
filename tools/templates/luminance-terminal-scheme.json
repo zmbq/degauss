@@ -1,0 +1,22 @@
+{
+  "background": "#000000",
+  "foreground": "${vga_white}",
+  "cursorColor": "${vga_white}",
+  "selectionBackground": "${selection}",
+  "black": "${vga_black}",
+  "red": "${vga_red}",
+  "green": "${vga_green}",
+  "yellow": "${vga_yellow}",
+  "blue": "${vga_blue}",
+  "purple": "${vga_purple}",
+  "cyan": "${vga_cyan}",
+  "white": "${vga_white}",
+  "brightBlack": "${vga_brightBlack}",
+  "brightRed": "${vga_brightRed}",
+  "brightGreen": "${vga_brightGreen}",
+  "brightYellow": "${vga_brightYellow}",
+  "brightBlue": "${vga_brightBlue}",
+  "brightPurple": "${vga_brightPurple}",
+  "brightCyan": "${vga_brightCyan}",
+  "brightWhite": "${vga_brightWhite}"
+}

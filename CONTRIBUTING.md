@@ -66,6 +66,7 @@ Generated files (`vscode/generated`, `dist`) are not committed.
    ```json
    {
      "name": "Commodore 64",
+     "aliases": ["c64"],
      "order": 50,
      "description": "One sentence shown in the look picker.",
      "font": "<font-id>",
@@ -80,7 +81,9 @@ Generated files (`vscode/generated`, `dist`) are not committed.
    ```
 
    Generate the GUID once (`[guid]::NewGuid()` in PowerShell) and never change it: Windows Terminal
-   uses it to remember users' changes to the profile.
+   uses it to remember users' changes to the profile. `aliases` are the names `look` accepts; the first
+   one is shown in lists and tab completion. For a color look, `"terminal": { "colorStyle": ... }` says
+   how `color` recolors it (`phosphor`, `intensity` or `luminance`; see `tools/templates/`).
 
 3. **Colors.** Either:
    - **Monochrome monitor:** add `"monochrome": { "style": "phosphor", "defaultColor": "green" }` to
@@ -124,13 +127,11 @@ monochrome look gets a **phosphor color**: a preset (green, amber, white, cyan o
 custom RGB color.
 - **VS Code:** choosing a monochrome look asks for its color; **Retro: Set Phosphor Color…** changes
   it later. Each look remembers its own color. This never touches Windows Terminal.
-- **Windows Terminal:** a `Set-RetroColor` command (alias `color`, like DOS) recolors the current
-  tab only, so an amber and a green Apple //e can run side by side. It takes presets, RGB
-  (`color '#40E0FF'`) and DOS codes (`color 0A`, `color 1F`); `color` alone goes back to the
-  profile's default. `-SetAsDefault` also makes the color the default for new tabs of that profile
-  (saved in `%LOCALAPPDATA%\RetroLooks\colors.json`, so it survives updates; duplicated profiles
-  get instructions instead, since their settings live in the user's own `settings.json`).
-  Preset color schemes ship with the profiles for anyone who prefers picking one in Settings.
+- **Windows Terminal:** `look` (`Set-RetroLook`) switches the current tab to a look and `color`
+  (`Set-RetroColor`, like DOS) recolors just that tab, so an amber and a green Apple //e can run side by
+  side. `color` takes presets, RGB (`color '#40E0FF'`) and DOS codes (`color 0A`, `color 1F`); `color`
+  alone goes back to the default. `-SetAsDefault` remembers a look's color, or the look `look` opens, in
+  `%LOCALAPPDATA%\RetroLooks\terminal.json`. The looks' profiles are hidden from Terminal's menu.
 - **Apple //e** becomes a single monochrome look (default green) instead of separate Green and Amber looks.
 - **IBM PS/2 monochrome** (Windows Terminal), default white: like the IBM 8503 monochrome VGA display,
   where the 16 VGA colors show as 16 shades of the phosphor color by brightness.

@@ -1,10 +1,21 @@
 {
   "name": "Apple //e",
+  "aliases": [
+    "apple",
+    "apple2e",
+    "a2e"
+  ],
   "order": 10,
   "description": "Apple //e 80-column text on a monochrome monitor, in the phosphor color of your choice.",
   "font": "pr-number-3",
-  "monochrome": { "style": "phosphor", "defaultColor": "green" },
-  "vscode": { "fontSize": 20, "cursorStyle": "block" },
+  "monochrome": {
+    "style": "phosphor",
+    "defaultColor": "green"
+  },
+  "vscode": {
+    "fontSize": 20,
+    "cursorStyle": "block"
+  },
   "terminal": {
     "guid": "{c9dc3efc-3f02-40a0-b4d8-c5e7a8856706}",
     "fontSize": 16,

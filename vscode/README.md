@@ -48,7 +48,7 @@ windows. VS Code's built-in terminal follows the look too.
 ## Windows Terminal
 
 Want the same looks in Windows Terminal? That's a separate part of Retro Looks, a PowerShell module,
-which also adds an IBM PS/2 VGA look. See
+with `look` and `color` commands (`look apple -Color amber`, `color 0A`) and IBM PS/2 looks too. See
 [Retro Looks for Windows Terminal](https://github.com/zmbq/vscode-retro#windows-terminal). It shares the
 fonts with the extension, and neither removes fonts the other still uses.
 

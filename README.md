@@ -8,6 +8,7 @@ module for Windows Terminal. Use either or both; they share the same fonts.
 |---|---|---|
 | **Apple //e** | PR Number 3 (the //e 80-column font) | A monochrome monitor in the phosphor color of your choice: green, amber, white, cyan, yellow or any RGB color |
 | **IBM PS/2 VGA** *(Windows Terminal only)* | PxPlus IBM VGA 9x16 | The black DOS prompt with the 16 VGA colors |
+| **IBM PS/2 Monochrome** *(Windows Terminal only)* | PxPlus IBM VGA 9x16 | The 8503 monochrome VGA display: the 16 colors become brightness levels, in the phosphor color of your choice |
 | **IBM 3270** | IBM 3270 | Mainframe color terminal with the default ISPF editor highlighting |
 | **IBM 3270 Monochrome** | IBM 3270 | A 3278-style monochrome terminal: ISPF's colors become normal and intensified text, in the phosphor color of your choice |
 
@@ -47,11 +48,34 @@ irm https://github.com/zmbq/vscode-retro/releases/latest/download/install.ps1 | 
 ```
 
 It installs the module for both PowerShell 7 and Windows PowerShell, then runs `Install-RetroLooks`,
-which installs the fonts and adds the looks as Windows Terminal profiles. Pixel fonts are sized for your
-display scaling so they stay sharp (`Install-RetroLooks -KeepFontSizes` skips that). Then close all
-Windows Terminal windows and reopen it: the looks are in the drop-down next to the **+** tab button.
-Nothing needs admin rights, and your `settings.json` isn't touched: the profiles are added as a
+which installs the fonts and adds the looks to Windows Terminal. Close all Windows Terminal windows and
+reopen it. Then, in any PowerShell tab:
+
+```powershell
+look apple                 # this tab becomes an Apple //e tab (same folder, new session)
+look apple -Color amber    # ... in amber
+look 3270mono              # or: ps2, ps2mono, 3270 (Tab completes)
+look -Off                  # back to a normal tab
+color cyan                 # recolor this tab only: green, amber, white, cyan, yellow, or '#RRGGBB'
+color 0A                   # DOS codes work too: 0A green, 0E yellow, 1F white on blue
+color                      # back to the tab's default colors
+color amber -SetAsDefault  # new tabs of this look open in amber
+look ps2 -SetAsDefault     # what `look` alone opens
+Get-RetroLook              # list the looks
+```
+
+Each tab has its own colors, so an amber and a green Apple //e can sit side by side. `look` needs a new
+tab because only a Windows Terminal profile can set a tab's font: it opens one in the current folder and
+closes the old tab (its scrollback doesn't come along; `-KeepTab` keeps it). In VS Code's terminal, `look`
+just points you to the extension, and `color` works for that session.
+
+The looks don't clutter Terminal's profile menu; `Install-RetroLooks -ShowProfiles` puts them there if you
+prefer clicking. Pixel fonts are sized for your display scaling so they stay sharp (`-KeepFontSizes` skips
+that). Nothing needs admin rights, and your `settings.json` isn't touched: the looks are added as a
 [Terminal fragment](https://learn.microsoft.com/windows/terminal/json-fragment-extensions).
+
+Programs that use exact RGB colors ("true color") bypass the palette, so `color` can't recolor those
+parts; Claude Code, for example, has an ANSI-colors-only theme in `/theme`.
 
 Prefer to read before you run? [Look at the installer](powershell/install.ps1) and
 [the module](powershell/RetroLooks/RetroLooks.psm1), or download `retro-looks-powershell.zip` from the
@@ -63,7 +87,7 @@ To uninstall (fonts are kept if the VS Code extension still uses them; add `-Rem
 & ([scriptblock]::Create((irm https://github.com/zmbq/vscode-retro/releases/latest/download/install.ps1))) -Uninstall
 ```
 
-or, to keep the module and just remove the profiles and fonts, `Uninstall-RetroLooks`.
+or, to keep the module and just remove the looks and fonts, `Uninstall-RetroLooks`.
 
 On macOS and Linux, install the fonts (see above) and pick them in your terminal's settings. Retro
 color schemes for iTerm2, Ghostty, WezTerm, kitty, Alacritty and others are on the
@@ -71,10 +95,9 @@ color schemes for iTerm2, Ghostty, WezTerm, kitty, Alacritty and others are on t
 
 ## Tweaking colors
 
-**Windows Terminal:** the monochrome looks come with a color scheme for every preset color, e.g.
-*Apple //e Amber* or *IBM 3270 Monochrome Cyan*. To keep, say, a green and an amber Apple //e side by
-side: Settings → the Apple //e profile → Duplicate, then pick the other scheme under Appearance. To
-fine-tune a scheme, duplicate it under Color schemes and edit the copy.
+**Windows Terminal:** `color` takes any `#RRGGBB`, and `-SetAsDefault` keeps it. The monochrome looks also
+come with a Terminal color scheme per preset (e.g. *Apple //e Amber*) if you'd rather build your own
+profile in Terminal's Settings.
 
 **VS Code:** for monochrome looks, just pick another color (any `#RRGGBB` works). To override
 individual colors of the **IBM 3270** theme, use your `settings.json`:

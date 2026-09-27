@@ -27,6 +27,9 @@ matching color schemes. People will often ask you to **add a new look** ("add a 
   no marker is left. Keep it that way, and give any new installer its own marker. The extension's
   `vscode/uninstall.js` (VS Code's `vscode:uninstall` hook) does the same when it's removed from the Extensions view.
 - The product version lives in the root `package.json`; the build copies it to both projects.
+- The PowerShell module repeats `vscode/palette.js`'s color math (`Get-PhosphorPalette` and friends in
+  `RetroLooks.psm1`) to recolor tabs at runtime. Change both together; the PowerShell tests compare them
+  color by color. Watch PowerShell's overload resolution: `[math]::Max(0, $x)` picks the integer overload.
 
 ## Commands
 
@@ -63,7 +66,8 @@ That affects every monochrome look and every color, so check several.
    Never modify, rename or re-encode font files.
 2. Create `looks/<look-id>/look.json` like the existing ones, with a **new** GUID for `terminal.guid`
    (`[guid]::NewGuid()` or `crypto.randomUUID()`, formatted `{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}`).
-   Never reuse or change an existing GUID; Windows Terminal ties users' settings to it.
+   Never reuse or change an existing GUID; Windows Terminal ties users' settings to it. Give it `aliases`
+   (the short names the Terminal `look` command accepts, e.g. `["c64"]`; they must be unique across looks).
 3. Colors: a monochrome machine gets `"monochrome": { "style": "phosphor", "defaultColor": "green" }`
    (or `"intensity"` for terminals with only normal and bright text). A color machine gets `vscode-theme.json` (a VS Code
    color theme without `name`) and `terminal-scheme.json` (a Windows Terminal scheme without `name`, with

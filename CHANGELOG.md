@@ -7,7 +7,13 @@
   An active Apple //e Green or Amber look from 0.1 carries over automatically.
 - New **IBM 3270 Monochrome** look: a 3278-style terminal where ISPF's colors become normal and
   intensified text, in any phosphor color.
-- Windows Terminal: a color scheme for every preset color of every monochrome look.
+- **Windows Terminal: `look` and `color`.** `Set-RetroLook` (alias `look`) turns the current tab into a
+  retro look (a new tab in the same folder), `Set-RetroColor` (alias `color`) recolors just this tab, with
+  presets, `#RRGGBB` or DOS codes like `0A`. `-SetAsDefault` remembers either. The looks' profiles are now
+  hidden from Terminal's menu (`Install-RetroLooks -ShowProfiles` shows them), and there's a color scheme
+  for every preset color of every monochrome look.
+- New **IBM PS/2 Monochrome** look (Windows Terminal): the 8503 display, where the VGA colors become
+  brightness levels of the phosphor color.
 - **Two independent parts.** Windows Terminal support is now the **RetroLooks PowerShell module**
   (`Install-RetroLooks`, `Uninstall-RetroLooks`), installed by the same one-line command. The VS Code
   extension installs fonts only (**Retro: Install Fonts**, shown only while they're missing). Both share

@@ -1,5 +1,9 @@
 {
   "name": "IBM PS/2 VGA",
+  "aliases": [
+    "ps2",
+    "vga"
+  ],
   "order": 30,
   "description": "IBM PS/2 VGA text mode: the classic black DOS prompt. Windows Terminal only for now.",
   "font": "pxplus-ibm-vga-9x16",
@@ -7,6 +11,7 @@
     "guid": "{66de10c3-4bbc-48d0-bca1-0aa15bcd1683}",
     "fontSize": 12,
     "cursorShape": "underscore",
-    "padding": "8"
+    "padding": "8",
+    "colorStyle": "luminance"
   }
 }

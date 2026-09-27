@@ -1,10 +1,20 @@
 {
   "name": "IBM 3270 Monochrome",
+  "aliases": [
+    "3270mono",
+    "3278"
+  ],
   "order": 45,
   "description": "IBM 3278-style monochrome mainframe terminal: ISPF's colors become normal and intensified text.",
   "font": "ibm-3270",
-  "monochrome": { "style": "intensity", "defaultColor": "green" },
-  "vscode": { "fontSize": 18, "cursorStyle": "underline" },
+  "monochrome": {
+    "style": "intensity",
+    "defaultColor": "green"
+  },
+  "vscode": {
+    "fontSize": 18,
+    "cursorStyle": "underline"
+  },
   "terminal": {
     "guid": "{4c0aca09-3401-4012-82c8-413061db3d11}",
     "fontSize": 14,

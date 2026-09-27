@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 // The color math is shared with the extension, which recolors monochrome looks at runtime.
-const { PRESETS, resolveColor, phosphorPalette, fillTemplate } = createRequire(import.meta.url)('../vscode/palette.js');
+const { PRESETS, VGA, MIN_PEAK, resolveColor, phosphorPalette, fillTemplate } = createRequire(import.meta.url)('../vscode/palette.js');
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const p = (...parts) => path.join(root, ...parts);
@@ -198,6 +198,8 @@ function terminalFragment(looks, fonts) {
       font: { face: fonts[l.font].family, size: l.terminal.fontSize },
       cursorShape: l.terminal.cursorShape,
       padding: l.terminal.padding,
+      // The looks are opened with the `look` command; Install-RetroLooks -ShowProfiles shows them in the menu.
+      hidden: true,
     })),
   };
 }
@@ -218,6 +220,32 @@ function buildPowerShell(looks, fonts, version) {
   copyFonts(fonts, path.join(moduleDir, 'fonts'));
   writeJson(path.join(moduleDir, 'fonts.json'), fontList(fonts));
   writeJson(path.join(moduleDir, 'retro-looks.json'), terminalFragment(looks, fonts));
+
+  // For the `look` and `color` commands: the looks, and what the module needs to recolor a tab. The module
+  // repeats palette.js's math in PowerShell (the tests check both give the same colors).
+  const aliases = new Map();
+  for (const l of looks) {
+    for (const alias of new Set([l.id, ...(l.aliases ?? [])])) {
+      if (aliases.has(alias)) throw new Error(`looks/${l.id}: alias "${alias}" is also used by ${aliases.get(alias)}`);
+      aliases.set(alias, l.id);
+    }
+  }
+  const colorStyle = (l) => l.monochrome?.style ?? l.terminal.colorStyle ?? 'phosphor';
+  writeJson(path.join(moduleDir, 'looks.json'), looks.map((l) => ({
+    id: l.id,
+    name: l.name,
+    aliases: l.aliases ?? [],
+    description: l.description,
+    guid: l.terminal.guid,
+    monochrome: Boolean(l.monochrome),
+    defaultColor: l.monochrome?.defaultColor ?? null,
+    colorStyle: colorStyle(l),
+  })));
+  writeJson(path.join(moduleDir, 'palette.json'), { presets: PRESETS, vga: VGA, minPeak: MIN_PEAK });
+  for (const style of new Set(looks.map(colorStyle))) {
+    fs.mkdirSync(path.join(moduleDir, 'templates'), { recursive: true });
+    fs.copyFileSync(templateFile(style, 'terminal-scheme'), path.join(moduleDir, 'templates', `${style}-terminal-scheme.json`));
+  }
   for (const dir of [out, moduleDir]) {
     fs.copyFileSync(p('LICENSE'), path.join(dir, 'LICENSE'));
     fs.writeFileSync(path.join(dir, 'THIRD-PARTY-NOTICES.md'), thirdPartyNotices(fonts));

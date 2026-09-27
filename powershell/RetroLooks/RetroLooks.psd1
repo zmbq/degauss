@@ -5,13 +5,13 @@
     GUID                 = '7f4fdfc1-13a0-4917-bb50-9f7ea44c6989'
     Author               = 'Itay Zandbank'
     Copyright            = '(c) Itay Zandbank. MIT License; bundled fonts keep their own licenses.'
-    Description          = 'Vintage computer looks for Windows Terminal: Apple //e, IBM PS/2 VGA and IBM 3270, with their period fonts.'
+    Description          = 'Vintage computer looks for Windows Terminal: Apple //e, IBM PS/2 and IBM 3270, with their period fonts. Switch looks with `look` and recolor a tab with `color`, like DOS.'
     PowerShellVersion    = '5.1'
     CompatiblePSEditions = @('Desktop', 'Core')
-    FunctionsToExport    = @('Install-RetroLooks', 'Uninstall-RetroLooks')
+    FunctionsToExport    = @('Install-RetroLooks', 'Uninstall-RetroLooks', 'Set-RetroLook', 'Set-RetroColor', 'Get-RetroLook', 'Initialize-RetroTab')
     CmdletsToExport      = @()
     VariablesToExport    = @()
-    AliasesToExport      = @()
+    AliasesToExport      = @('look', 'color')
     PrivateData          = @{
         PSData = @{
             Tags       = @('retro', 'vintage', 'windows-terminal', 'terminal', 'font', 'theme', 'apple', 'ibm', '3270', 'vga')

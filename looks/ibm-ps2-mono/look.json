@@ -1,0 +1,20 @@
+{
+  "name": "IBM PS/2 Monochrome",
+  "aliases": [
+    "ps2mono",
+    "8503"
+  ],
+  "order": 35,
+  "description": "IBM PS/2 with the 8503 monochrome VGA display: the 16 VGA colors become brightness levels of the phosphor color. Windows Terminal only.",
+  "font": "pxplus-ibm-vga-9x16",
+  "monochrome": {
+    "style": "luminance",
+    "defaultColor": "white"
+  },
+  "terminal": {
+    "guid": "{f142623f-5194-4547-b861-8251489cd76d}",
+    "fontSize": 12,
+    "cursorShape": "underscore",
+    "padding": "8"
+  }
+}

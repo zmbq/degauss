@@ -1,10 +1,12 @@
 # Tests the RetroLooks PowerShell module and its installer from the build output (dist/powershell), in
 # Windows PowerShell 5.1 and PowerShell 7. Everything is redirected to a temporary folder and a throwaway
-# registry key, so it's safe to run on a developer machine. Build first (`npm test` or `node tools/build.mjs`).
+# registry key, wt.exe is replaced by a fake, and color sequences are captured instead of written, so it's
+# safe to run on a developer machine. Build first (`npm test` or `node tools/build.mjs`).
 #   pwsh -File tests/powershell/RetroLooks.tests.ps1
 param([switch]$Inner)   # set when the script re-runs itself inside each PowerShell
 $ErrorActionPreference = 'Stop'
-$package = Join-Path (Split-Path (Split-Path $PSScriptRoot)) 'dist\powershell'
+$root = Split-Path (Split-Path $PSScriptRoot)
+$package = Join-Path $root 'dist\powershell'
 if (-not (Test-Path (Join-Path $package 'RetroLooks\RetroLooks.psd1'))) { throw "Build first: $package is missing." }
 
 if (-not $Inner) {
@@ -24,17 +26,22 @@ $script:failures = 0
 function Check([bool]$Condition, [string]$Message) {
     if ($Condition) { Write-Host "  ok   $Message" } else { Write-Host "  FAIL $Message" -ForegroundColor Red; $script:failures++ }
 }
+function Throws([scriptblock]$Block, [string]$Pattern, [string]$Message) {
+    try { & $Block; Check $false "$Message (no error)" } catch { Check ($_.Exception.Message -match $Pattern) "$Message ($($_.Exception.Message))" }
+}
 
 $sandbox = Join-Path ([IO.Path]::GetTempPath()) ('retro-looks-test-' + [guid]::NewGuid())
 $testKey = "HKCU:\SOFTWARE\RetroLooksTest-$([guid]::NewGuid())"
 $paths = @{
-    Fonts      = Join-Path $sandbox 'fonts'
-    FontKey    = "$testKey\Fonts"
-    Fragment   = Join-Path $sandbox 'Fragments\Retro Looks'
-    FontUsers  = Join-Path $sandbox 'RetroLooks\font-users'
+    Fonts    = Join-Path $sandbox 'fonts'
+    FontKey  = "$testKey\Fonts"
+    Fragment = Join-Path $sandbox 'Fragments\Retro Looks'
+    Data     = Join-Path $sandbox 'RetroLooks'
 }
 $fragmentFile = Join-Path $paths.Fragment 'retro-looks.json'
+$prefsFile = Join-Path $paths.Data 'terminal.json'
 New-Item -ItemType Directory -Force $sandbox | Out-Null
+$savedEnv = @{ WT_SESSION = $env:WT_SESSION; WT_PROFILE_ID = $env:WT_PROFILE_ID; TERM_PROGRAM = $env:TERM_PROGRAM }
 
 try {
     Import-Module (Join-Path $package 'RetroLooks\RetroLooks.psd1') -Force
@@ -42,13 +49,24 @@ try {
     & $module {
         param($p)
         $script:FontDir = $p.Fonts; $script:FontKey = $p.FontKey; $script:FragmentDir = $p.Fragment
-        $script:FontUsersDir = $p.FontUsers
+        $script:DataDir = $p.Data; $script:FontUsersDir = Join-Path $p.Data 'font-users'
+        # Capture color sequences and wt.exe calls instead of performing them.
+        $script:Written = @()
+        function script:Write-TerminalSequence([string]$Sequence) { $script:Written += $Sequence }
+        $script:WtCalls = @()
+        $script:WtCommand = { $script:WtCalls += , @($args) }
     } $paths
+    $inModule = { param($block, $arg1, $arg2) & $module $block $arg1 $arg2 }
     $fonts = & $module { Get-RetroFont }
+    $looks = @(& $module { Get-LookData })
+    $lookById = @{}; foreach ($l in $looks) { $lookById[$l.id] = $l }
     $registered = { $k = Get-ItemProperty $paths.FontKey -ErrorAction SilentlyContinue; @($fonts | Where-Object { $k -and $k.($_.registryName) }) }
-    $ownMarker = Join-Path $paths.FontUsers 'powershell'
-    # The marker the VS Code extension leaves (see vscode/fonts.js).
-    $vscodeMarker = Join-Path $paths.FontUsers 'vscode'
+    $ownMarker = Join-Path $paths.Data 'font-users\powershell'
+    $vscodeMarker = Join-Path $paths.Data 'font-users\vscode'   # what the VS Code extension leaves (vscode/fonts.js)
+    $written = { & $module { $script:Written -join '' } }
+    $clearWritten = { & $module { $script:Written = @() } }
+    $wtCalls = { & $module { $script:WtCalls } }
+    $clearWt = { & $module { $script:WtCalls = @() } }
 
     Write-Host '-- Install-RetroLooks'
     Install-RetroLooks 6>$null | Out-Null
@@ -62,7 +80,8 @@ try {
     $schemes = @($fragment.schemes | ForEach-Object { $_.name })
     $dpi = & $module { Get-DisplayDpi }
     foreach ($terminalProfile in $fragment.profiles) {
-        Check ($terminalProfile.commandline -match '^(pwsh|powershell)\.exe') "$($terminalProfile.name): shell set"
+        Check ($terminalProfile.commandline -match '^(pwsh|powershell)\.exe -NoLogo -NoExit -Command Initialize-RetroTab$') "$($terminalProfile.name): runs Initialize-RetroTab"
+        Check ($terminalProfile.hidden -eq $true) "$($terminalProfile.name): hidden"
         Check ($schemes -contains $terminalProfile.colorScheme) "$($terminalProfile.name): color scheme '$($terminalProfile.colorScheme)' exists"
         $grid = ($fonts | Where-Object family -eq $terminalProfile.font.face).pixelsPerEm
         if ($grid) {
@@ -70,17 +89,126 @@ try {
             Check ([math]::Abs($pixelsPerDot - [math]::Round($pixelsPerDot)) -lt 0.001) "$($terminalProfile.name): $($terminalProfile.font.size)pt is sharp at $dpi DPI"
         }
     }
-
-    Write-Host '-- Install-RetroLooks -KeepFontSizes'
-    Install-RetroLooks -KeepFontSizes 6>$null | Out-Null
+    Install-RetroLooks -ShowProfiles -KeepFontSizes 6>$null | Out-Null
+    $fragment = Get-Content $fragmentFile -Raw | ConvertFrom-Json
+    Check (@($fragment.profiles | Where-Object hidden).Count -eq 0) '-ShowProfiles shows the profiles'
     $source = Get-Content (Join-Path $package 'RetroLooks\retro-looks.json') -Raw | ConvertFrom-Json
-    $written = Get-Content $fragmentFile -Raw | ConvertFrom-Json
-    Check ((@($written.profiles | ForEach-Object { $_.font.size }) -join ',') -eq (@($source.profiles | ForEach-Object { $_.font.size }) -join ',')) 'nominal font sizes kept'
+    Check ((@($fragment.profiles | ForEach-Object { $_.font.size }) -join ',') -eq (@($source.profiles | ForEach-Object { $_.font.size }) -join ',')) '-KeepFontSizes keeps nominal sizes'
+
+    Write-Host '-- colors match the VS Code extension (vscode/palette.js)'
+    $diffs = 0; $count = 0
+    foreach ($look in $looks | Where-Object monochrome) {
+        foreach ($preset in (& $module { Get-PaletteData }).presets.PSObject.Properties) {
+            $name = "$($look.name) " + $preset.Name.Substring(0, 1).ToUpper() + $preset.Name.Substring(1)
+            $expected = $source.schemes | Where-Object name -eq $name
+            $actual = & $inModule { param($s, $c) Get-RetroScheme $s $c } $look.colorStyle $preset.Value
+            foreach ($key in $actual.Keys) { $count++; if ($actual[$key] -ne $expected.$key) { $diffs++ } }
+        }
+    }
+    Check ($count -gt 0 -and $diffs -eq 0) "preset schemes identical to the build's ($count colors)"
+    if (Get-Command node -ErrorAction SilentlyContinue) {
+        $palette = (Join-Path $root 'vscode\palette.js').Replace('\', '/')
+        foreach ($custom in '#40E0FF', '#102030', '#FF00FF') {
+            $js = node -e "const p=require('$palette'); console.log(JSON.stringify(p.phosphorPalette(p.resolveColor('$custom'))))" | ConvertFrom-Json
+            $ps = & $inModule { param($c) Get-PhosphorPalette (Resolve-RetroColor $c) } $custom
+            $bad = @($ps.Keys | Where-Object { $ps[$_] -ne $js.$_ })
+            Check ($bad.Count -eq 0) "custom $custom palette identical to palette.js$(if ($bad) { ': ' + ($bad -join ', ') })"
+        }
+    }
+
+    Write-Host '-- color specs'
+    $spec = { param($s) & $module { param($x) ConvertFrom-ColorSpec $x } $s }
+    Check ((& $spec 'AMBER').Stored -eq 'amber') 'preset names in any case'
+    Check ((& $spec '40e0ff').Stored -eq '#40E0FF') 'RGB with or without #'
+    Check ((& $spec '#102030').Phosphor -eq (& $inModule { param($c) Resolve-RetroColor $c } '#102030')) 'dark colors brightened'
+    $dosGreen = & $spec '0A'
+    Check ($dosGreen.Phosphor -eq (& $inModule { param($c) Resolve-RetroColor $c } 'green') -and $dosGreen.Stored -eq '0A') 'DOS 0A is the green phosphor'
+    Check ((& $spec 'e').Stored -eq '0E') 'one DOS digit means a black background'
+    $dosBlue = & $spec '1f'
+    Check ($dosBlue.Foreground -eq '#FFFFFF' -and $dosBlue.Background -eq '#0000AA' -and -not $dosBlue.Phosphor) 'DOS 1F is white on blue'
+    Throws { & $spec '11' } 'same' 'DOS rejects the same text and background color'
+    Throws { & $spec 'purple' } 'Unknown color' 'unknown names are rejected'
+    Throws { & $spec '#000000' } 'black' 'black is rejected'
+
+    Write-Host '-- Set-RetroColor'
+    $env:WT_SESSION = 'test'; $env:TERM_PROGRAM = $null
+    $env:WT_PROFILE_ID = $lookById['apple2e'].guid
+    & $clearWritten
+    color amber
+    $amber = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'phosphor' (Resolve-RetroColor $c)) } 'amber'
+    Check ((& $written) -eq $amber) 'color amber recolors an Apple //e tab with the amber phosphor palette'
+    Check (([regex]::Matches((& $written), "\]4;\d+;rgb:")).Count -eq 16) 'all 16 ANSI colors are set'
+    $env:WT_PROFILE_ID = $lookById['ibm-3270'].guid
+    & $clearWritten
+    color amber
+    $intensity = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'intensity' (Resolve-RetroColor $c)) } 'amber'
+    Check ((& $written) -eq $intensity) 'in a 3270 tab, amber keeps the two brightness levels'
+    & $clearWritten
+    color 1F
+    Check ((& $written) -match '\]10;rgb:ff/ff/ff' -and (& $written) -match '\]11;rgb:00/00/aa' -and (& $written) -notmatch '\]4;') 'DOS 1F sets only text and background'
+    & $clearWritten
+    color
+    Check ((& $written) -eq (& $module { $script:ResetSequence })) 'color alone resets the tab'
+    Throws { color nonsense } 'Unknown color' 'bad colors are reported'
+
+    Write-Host '-- defaults and new tabs'
+    $env:WT_PROFILE_ID = $lookById['apple2e'].guid
+    color cyan -SetAsDefault 6>$null
+    Check ((Get-Content $prefsFile -Raw | ConvertFrom-Json).colors.apple2e -eq 'cyan') '-SetAsDefault saves the color for the look'
+    & $clearWritten
+    Initialize-RetroTab
+    $cyan = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'phosphor' (Resolve-RetroColor $c)) } 'cyan'
+    Check ((& $written) -eq $cyan) 'a new tab of the look opens in the saved color'
+    & $clearWritten
+    color
+    Check ((& $written) -eq ((& $module { $script:ResetSequence }) + $cyan)) 'color alone goes back to the saved default'
+    color -SetAsDefault
+    Check (-not (Get-Content $prefsFile -Raw | ConvertFrom-Json).colors.apple2e) 'color -SetAsDefault alone forgets the saved color'
+    $env:WT_PROFILE_ID = $null
+    Throws { color amber -SetAsDefault } 'Retro Looks tab' '-SetAsDefault outside a Retro Looks tab is refused'
+    & $clearWritten
+    color amber
+    Check ((& $written) -eq $amber) 'outside Retro Looks tabs, color still works as a phosphor monitor'
+
+    Write-Host '-- Set-RetroLook'
+    Push-Location $sandbox
+    & $clearWt
+    look apple -KeepTab
+    $call = @(& $wtCalls)[0]
+    Check (($call -join ' ') -eq "-w 0 nt -p $($lookById['apple2e'].guid) -d $sandbox") 'look apple opens an Apple //e tab in the current folder'
+    & $clearWt
+    look 3270mono -Color amber -KeepTab
+    $pendingFile = Join-Path $paths.Data 'pending-color'
+    Check ((@(& $wtCalls)[0] -join ' ') -match [regex]::Escape($lookById['ibm-3270-mono'].guid)) 'look 3270mono opens the 3270 Monochrome profile'
+    Check ((Get-Content $pendingFile -Raw) -match '^ibm-3270-mono\|amber\|\d+$') '-Color is handed to the new tab'
+    $env:WT_PROFILE_ID = $lookById['ibm-3270-mono'].guid
+    & $clearWritten
+    Initialize-RetroTab
+    $monoAmber = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'intensity' (Resolve-RetroColor $c)) } 'amber'
+    Check ((& $written) -eq $monoAmber -and -not (Test-Path $pendingFile)) 'the new tab applies it and clears the hand-over'
+    & $clearWt
+    look -Off -KeepTab
+    Check ((@(& $wtCalls)[0] -join ' ') -eq "-w 0 nt -d $sandbox") 'look -Off opens a normal tab'
+    & $clearWt
+    look ps2 -SetAsDefault -KeepTab 6>$null
+    look -KeepTab
+    Check ((@(& $wtCalls)[1] -join ' ') -match [regex]::Escape($lookById['ibm-ps2-vga'].guid)) 'look alone opens the default look'
+    Check (@(Get-RetroLook | Where-Object Default).Name -eq 'IBM PS/2 VGA') 'Get-RetroLook shows the default'
+    Check (@(Get-RetroLook).Count -eq $looks.Count) 'Get-RetroLook lists every look'
+    Throws { look nosuchlook -KeepTab } 'apple.*3270' 'unknown looks list the valid names'
+    $env:TERM_PROGRAM = 'vscode'
+    & $clearWt
+    look apple -KeepTab 6>$null
+    Check (@(& $wtCalls).Count -eq 0) "in VS Code's terminal, look only prints a hint"
+    $env:TERM_PROGRAM = $null; $env:WT_SESSION = $null
+    Throws { look apple -KeepTab } 'Windows Terminal' 'outside Windows Terminal, look explains why it cannot'
+    Pop-Location
 
     Write-Host '-- fonts shared with the VS Code extension'
     'Retro Looks for VS Code' | Set-Content $vscodeMarker
     $message = Uninstall-RetroLooks 6>&1 | Out-String
     Check (-not (Test-Path $paths.Fragment)) 'Terminal fragment removed'
+    Check (-not (Test-Path $prefsFile)) 'preferences removed'
     Check (-not (Test-Path $ownMarker)) 'own marker removed'
     Check ((& $registered).Count -eq $fonts.Count) 'fonts kept while the VS Code extension uses them'
     Check ($message -match 'VS Code extension still uses them') 'user is told why'
@@ -90,10 +218,14 @@ try {
     Check ((& $registered).Count -eq 0) '-RemoveFonts removes them anyway'
     Remove-Item $vscodeMarker
     Install-RetroLooks 6>$null | Out-Null
+    $env:WT_SESSION = 'test'
+    Push-Location $sandbox
+    look apple -Color amber -SetAsDefault -KeepTab 6>$null
+    Pop-Location
     Uninstall-RetroLooks 6>$null | Out-Null
     Check ((& $registered).Count -eq 0) 'fonts removed when nothing else uses them'
     Check (@(Get-ChildItem $paths.Fonts -ErrorAction SilentlyContinue).Count -eq 0) 'font files deleted'
-    Check (-not (Test-Path (Split-Path $paths.FontUsers))) 'no RetroLooks folder left behind'
+    Check (-not (Test-Path $paths.Data)) 'no RetroLooks folder left behind'
 
     Write-Host '-- cleans up a v0.1 installation'
     New-Item -ItemType Directory -Force $paths.Fragment, $paths.Fonts | Out-Null
@@ -109,7 +241,7 @@ try {
     Check ($left.Count -eq 0) 'old fonts unregistered, including ones no longer shipped'
 
     Write-Host '-- sharp point sizes'
-    $sharp = { param($pt, $dpi) & $module { param($a, $b) Get-SharpPoints $a 16 $b } $pt $dpi }
+    $sharp = { param($pt, $d) & $module { param($a, $b) Get-SharpPoints $a 16 $b } $pt $d }
     Check ((& $sharp 16 144) -eq 16) '16pt at 144 DPI stays 16pt'
     Check ((& $sharp 12 144) -eq 16) '12pt at 144 DPI becomes 16pt'
     Check ((& $sharp 16 96) -eq 12) '16pt at 96 DPI becomes 12pt'
@@ -126,7 +258,7 @@ try {
     & (Join-Path $package 'install.ps1') -ModulesRoot $modules -NoRun 6>$null | Out-Null
     $version = (Import-PowerShellDataFile (Join-Path $package 'RetroLooks\RetroLooks.psd1')).ModuleVersion
     Check (Test-Path (Join-Path $modules "RetroLooks\$version\RetroLooks.psd1")) "module installed as RetroLooks\$version"
-    Check (Test-Path (Join-Path $modules "RetroLooks\$version\fonts.json")) 'module data copied'
+    Check (Test-Path (Join-Path $modules "RetroLooks\$version\looks.json")) 'module data copied'
     & (Join-Path $package 'install.ps1') -ModulesRoot $modules -NoRun 6>$null | Out-Null
     Check (@(Get-ChildItem (Join-Path $modules 'RetroLooks')).Count -eq 1) 'reinstalling replaces the old copy'
     & (Join-Path $package 'install.ps1') -ModulesRoot $modules -NoRun -Uninstall 6>$null | Out-Null
@@ -135,6 +267,7 @@ try {
     Write-Host "  FAIL $($_.Exception.Message) ($($_.InvocationInfo.PositionMessage))" -ForegroundColor Red
     $script:failures++
 } finally {
+    foreach ($name in $savedEnv.Keys) { Set-Item "env:$name" $savedEnv[$name] -ErrorAction SilentlyContinue }
     Remove-Module RetroLooks -ErrorAction SilentlyContinue
     Remove-Item $testKey -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
