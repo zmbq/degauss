@@ -137,8 +137,9 @@ function buildVscode(allLooks, fonts, version) {
     };
   }));
 
-  // Marketplace files live at the repo root; vsce needs them next to package.json.
-  for (const file of ['README.md', 'CHANGELOG.md', 'LICENSE']) fs.copyFileSync(p(file), path.join(ext, file));
+  // vsce needs these next to package.json.
+  // vscode/README.md is the extension's own page (Marketplace, Extensions view); the rest live at the repo root.
+  for (const file of ['CHANGELOG.md', 'LICENSE']) fs.copyFileSync(p(file), path.join(ext, file));
   fs.writeFileSync(path.join(ext, 'THIRD-PARTY-NOTICES.md'), thirdPartyNotices(fonts));
 
   const pkgFile = path.join(ext, 'package.json');

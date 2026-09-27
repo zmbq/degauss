@@ -103,7 +103,8 @@ Generated files (`vscode/generated`, `dist`) are not committed.
    Both also run on every push and pull request. Then press `F5` in VS Code to start an Extension Development Host with your look, and run the
    generated `dist/powershell/install.ps1` to try it in Windows Terminal.
 
-5. Add a line to the table in `README.md` and a credit for the font, and open a pull request.
+5. Add a line to the looks table in `README.md` (and in `vscode/README.md`, the extension's Marketplace page,
+   for VS Code looks) and a credit for the font, and open a pull request.
    A screenshot in the PR is great.
 
 ## Accuracy

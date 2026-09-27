@@ -31,9 +31,12 @@ Install **Retro Looks** from the Marketplace (or Open VSX), then open the Comman
 - On macOS and Linux, run **Retro: Open Bundled Fonts Folder** and install the fonts with your
   system's font installer. Automatic installation there is on the [roadmap](CONTRIBUTING.md#roadmap-and-where-help-is-wanted).
 - Works in Remote SSH, WSL and container windows: the extension runs on your local machine.
+- **Before uninstalling, run Retro: Off.** Once the extension is gone it can't restore your theme and
+  fonts: VS Code would fall back to its default theme and keep the retro font size and cursor.
+  (Reinstalling and running **Retro: Off** fixes it; the extension remembers your original settings.)
 
 The themes are also available on their own through the normal theme picker (`Ctrl+K Ctrl+T`), and
-you can use any of the fonts with any theme.
+you can use any of the fonts with any theme. The extension's full page is [vscode/README.md](vscode/README.md).
 
 ## Windows Terminal
 

@@ -46,7 +46,7 @@ Color…** or the `retroLooks.phosphorColors` setting, e.g. `{ "apple2e": "#40E0
 the preset color schemes). Tell them that first.
 
 To add a new **preset** for everyone, add it to `PRESETS` in `vscode/palette.js` (a name and a
-`#RRGGBB`) and to the preset lists in `README.md`. Every monochrome look then gets it in VS Code and a
+`#RRGGBB`) and to the preset lists in `README.md` and `vscode/README.md`. Every monochrome look then gets it in VS Code and a
 Terminal scheme for it. Softer, less saturated colors are easier on the eyes on large modern screens.
 
 To change how monochrome looks map shades to UI elements, edit the templates or `phosphorPalette()`.
@@ -71,7 +71,8 @@ That affects every monochrome look and every color, so check several.
    `looks/ibm-3270/`. Use the machine's real palette and default colors.
    A look can be **Windows Terminal only**: leave out the `vscode` section and `vscode-theme.json`
    (see `looks/ibm-ps2-vga/`). Do that when a VS Code theme wouldn't look good yet, rather than shipping an ugly one.
-4. Build, then update `README.md` (the looks table and the font credit).
+4. Build, then update `README.md` and, for VS Code looks, `vscode/README.md` (the extension's Marketplace
+   page): the looks table and the font credit.
 
 ## Rules
 

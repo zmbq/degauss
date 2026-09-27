@@ -6,7 +6,6 @@ dist/
 *.vsix
 node_modules/
 vscode/generated/
-vscode/README.md
 vscode/CHANGELOG.md
 vscode/LICENSE
 vscode/THIRD-PARTY-NOTICES.md
