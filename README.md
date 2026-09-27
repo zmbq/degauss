@@ -27,7 +27,7 @@ Install **Retro Looks** from the Marketplace (or Open VSX), then open the Comman
 - On Windows, the extension offers to install its fonts when VS Code starts (for your user only,
   no admin needed), until you install them or choose **Don't Show Again**. You can also run
   **Retro: Install Fonts**. **Retro: Uninstall Fonts** removes them, unless Retro Looks for Windows
-  Terminal still uses them.
+  Terminal still uses them. Uninstalling the extension from the Extensions view cleans up the fonts too.
 - On macOS and Linux, run **Retro: Open Bundled Fonts Folder** and install the fonts with your
   system's font installer. Automatic installation there is on the [roadmap](CONTRIBUTING.md#roadmap-and-where-help-is-wanted).
 - Works in Remote SSH, WSL and container windows: the extension runs on your local machine.

@@ -9,10 +9,11 @@ $script:FontDir = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
 $script:FontKey = 'HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts'
 # Never rename this folder: Windows Terminal ties users' profile settings to it.
 $script:FragmentDir = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows Terminal\Fragments\Retro Looks'
-# The Retro Looks VS Code extension uses the same fonts; uninstalling here leaves them alone if it's installed.
-$script:EditorExtensionDirs = @('.vscode', '.vscode-insiders', '.vscode-oss', '.cursor', '.windsurf') |
-    ForEach-Object { Join-Path $HOME "$_\extensions" }
-$script:ExtensionId = 'zmbq.vscode-retro'
+# The Retro Looks VS Code extension installs the same fonts. Each project that uses them leaves a marker
+# file here; the fonts are only removed once no marker is left.
+$script:FontUsersDir = Join-Path $env:LOCALAPPDATA 'RetroLooks\font-users'
+$script:Marker = 'powershell'
+$script:UserNames = @{ vscode = 'the Retro Looks VS Code extension' }
 # Installed font files start with this; matches installedFile in fonts.json (see tools/build.mjs).
 $script:FontFilePrefix = 'RetroLooks-'
 
@@ -66,13 +67,25 @@ function Uninstall-RetroFont {
     }
 }
 
-function Test-RetroVSCodeExtension {
-    foreach ($dir in $script:EditorExtensionDirs) {
-        if ((Test-Path $dir) -and (Get-ChildItem $dir -Directory -Filter "$script:ExtensionId-*" -ErrorAction SilentlyContinue)) {
-            return $true
-        }
+function Add-FontMarker {
+    New-Item -ItemType Directory -Force $script:FontUsersDir | Out-Null
+    $version = $ExecutionContext.SessionState.Module.Version
+    $line = "Retro Looks for Windows Terminal (RetroLooks module $version), $((Get-Date).ToUniversalTime().ToString('o'))"
+    [IO.File]::WriteAllText((Join-Path $script:FontUsersDir $script:Marker), "$line`n")
+}
+
+function Remove-FontMarker {
+    Remove-Item (Join-Path $script:FontUsersDir $script:Marker) -Force -ErrorAction SilentlyContinue
+    # Leave nothing behind once no project uses the fonts.
+    foreach ($dir in $script:FontUsersDir, (Split-Path $script:FontUsersDir)) {
+        if ((Test-Path $dir) -and -not (Get-ChildItem $dir -Force)) { Remove-Item $dir -Force }
     }
-    return $false
+}
+
+# The other projects still using the fonts (marker names, e.g. "vscode").
+function Get-OtherFontUser {
+    if (-not (Test-Path $script:FontUsersDir)) { return }
+    Get-ChildItem $script:FontUsersDir -File | Where-Object Name -ne $script:Marker | ForEach-Object Name
 }
 
 function Install-RetroLooks {
@@ -90,6 +103,7 @@ function Install-RetroLooks {
     param([switch]$KeepFontSizes)
 
     Install-RetroFont
+    Add-FontMarker
 
     $shell = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { 'pwsh.exe -NoLogo' } else { 'powershell.exe -NoLogo' }
     $pixelsPerEm = @{}
@@ -115,9 +129,9 @@ function Install-RetroLooks {
 function Uninstall-RetroLooks {
     <#
     .SYNOPSIS
-    Removes the Retro Looks profiles from Windows Terminal, and the fonts unless VS Code still uses them.
+    Removes the Retro Looks profiles from Windows Terminal, and the fonts unless something else still uses them.
     .PARAMETER RemoveFonts
-    Remove the fonts even if the Retro Looks VS Code extension is installed.
+    Remove the fonts even if the Retro Looks VS Code extension still uses them.
     #>
     [CmdletBinding()]
     param([switch]$RemoveFonts)
@@ -125,8 +139,11 @@ function Uninstall-RetroLooks {
     if (Test-Path $script:FragmentDir) { Remove-Item $script:FragmentDir -Recurse -Force }
     Write-Host 'Removed the Retro Looks profiles from Windows Terminal.'
 
-    if (-not $RemoveFonts -and (Test-RetroVSCodeExtension)) {
-        Write-Host 'Kept the fonts: the Retro Looks VS Code extension still uses them (-RemoveFonts removes them anyway).'
+    Remove-FontMarker
+    $others = @(Get-OtherFontUser)
+    if ($others.Count -and -not $RemoveFonts) {
+        $names = ($others | ForEach-Object { if ($script:UserNames[$_]) { $script:UserNames[$_] } else { $_ } }) -join ', '
+        Write-Host "Kept the fonts: $names still uses them (-RemoveFonts removes them anyway)."
     } else {
         Uninstall-RetroFont
     }

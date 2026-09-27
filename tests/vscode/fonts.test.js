@@ -1,4 +1,5 @@
-// The extension's font install/uninstall on Windows, against a temporary folder and a throwaway registry key.
+// The extension's font install/uninstall on Windows, against a temporary folder and a throwaway registry
+// key: the fonts are shared with the RetroLooks PowerShell module through marker files.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -9,7 +10,8 @@ const { execFileSync } = require('node:child_process');
 
 const windowsOnly = { skip: process.platform !== 'win32' && 'installs fonts on Windows only' };
 
-test('fonts are kept while Retro Looks for Windows Terminal uses them', windowsOnly, async (t) => {
+// Points LOCALAPPDATA and the fonts registry key at a sandbox for one test.
+function useSandbox(t) {
   const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'retro-looks-test-'));
   const key = `HKCU\\Software\\RetroLooksTest-${crypto.randomUUID()}\\Fonts`;
   const saved = { LOCALAPPDATA: process.env.LOCALAPPDATA, key: process.env.RETRO_LOOKS_TEST_FONT_KEY };
@@ -23,32 +25,80 @@ test('fonts are kept while Retro Looks for Windows Terminal uses them', windowsO
     fs.rmSync(sandbox, { recursive: true, force: true });
   });
 
-  // Loaded after the environment is set, since the extension reads it when it loads.
-  const { createFakeVscode, EXTENSION_DIR } = require('./helpers/fake-vscode');
+  const { EXTENSION_DIR } = require('./helpers/fake-vscode');
   const fonts = JSON.parse(fs.readFileSync(path.join(EXTENSION_DIR, 'generated', 'fonts.json'), 'utf8'));
-  const registered = () => fonts.filter((f) => {
-    try { return execFileSync('reg', ['query', key, '/v', f.registryName], { encoding: 'utf8' }).includes(f.installedFile); } catch { return false; }
-  }).length;
-  const fontDir = path.join(sandbox, 'Microsoft', 'Windows', 'Fonts');
-  const fragmentDir = path.join(sandbox, 'Microsoft', 'Windows Terminal', 'Fragments', 'Retro Looks');
+  const usersDir = path.join(sandbox, 'RetroLooks', 'font-users');
+  return {
+    fonts,
+    fontDir: path.join(sandbox, 'Microsoft', 'Windows', 'Fonts'),
+    usersDir,
+    marker: (name) => path.join(usersDir, name),
+    registered: () => fonts.filter((f) => {
+      try { return execFileSync('reg', ['query', key, '/v', f.registryName], { encoding: 'utf8' }).includes(f.installedFile); } catch { return false; }
+    }).length,
+    runUninstallHook: () => execFileSync(process.execPath, [path.join(EXTENSION_DIR, 'uninstall.js')], { env: process.env }),
+  };
+}
 
+test('installing adds a marker; uninstalling keeps fonts the PowerShell module still uses', windowsOnly, async (t) => {
+  const box = useSandbox(t);
+  const { createFakeVscode } = require('./helpers/fake-vscode');
   const fake = createFakeVscode();
   fake.activate();
   await fake.settle();
 
   await fake.commands['retroLooks.install']();
-  assert.strictEqual(registered(), fonts.length, 'all fonts registered');
-  for (const f of fonts) assert(fs.existsSync(path.join(fontDir, f.installedFile)), `${f.installedFile} copied`);
+  assert.strictEqual(box.registered(), box.fonts.length, 'all fonts registered');
+  for (const f of box.fonts) assert(fs.existsSync(path.join(box.fontDir, f.installedFile)), `${f.installedFile} copied`);
+  assert.match(fs.readFileSync(box.marker('vscode'), 'utf8'), /Retro Looks for VS Code \d/);
 
-  // The Terminal profiles are installed: uninstalling from VS Code keeps the fonts.
-  fs.mkdirSync(fragmentDir, { recursive: true });
+  // The RetroLooks module also uses the fonts: uninstalling from VS Code keeps them.
+  fs.writeFileSync(box.marker('powershell'), 'Retro Looks for Windows Terminal');
   await fake.commands['retroLooks.uninstall']();
-  assert.strictEqual(registered(), fonts.length, 'fonts kept while the Terminal profiles are installed');
-  assert(fake.messages.some((m) => /Windows Terminal is installed/.test(m)), 'user is told why');
+  assert(!fs.existsSync(box.marker('vscode')), 'own marker removed');
+  assert(fs.existsSync(box.marker('powershell')), "the module's marker is left alone");
+  assert.strictEqual(box.registered(), box.fonts.length, 'fonts kept');
+  assert(fake.messages.some((m) => /still used by Retro Looks for Windows Terminal/.test(m)), 'user is told why');
 
-  // Without them, uninstalling removes the fonts.
-  fs.rmSync(fragmentDir, { recursive: true });
+  // Once nothing else uses them, uninstalling removes the fonts and the marker folder.
+  fs.rmSync(box.marker('powershell'));
+  await fake.commands['retroLooks.install']();
   await fake.commands['retroLooks.uninstall']();
-  assert.strictEqual(registered(), 0, 'fonts unregistered');
-  for (const f of fonts) assert(!fs.existsSync(path.join(fontDir, f.installedFile)), `${f.installedFile} deleted`);
+  assert.strictEqual(box.registered(), 0, 'fonts unregistered');
+  for (const f of box.fonts) assert(!fs.existsSync(path.join(box.fontDir, f.installedFile)), `${f.installedFile} deleted`);
+  assert(!fs.existsSync(path.dirname(box.usersDir)), 'no RetroLooks folder left behind');
+});
+
+test('the uninstall hook removes the fonts unless the PowerShell module still uses them', windowsOnly, async (t) => {
+  const box = useSandbox(t);
+  const { createFakeVscode } = require('./helpers/fake-vscode');
+  const fake = createFakeVscode();
+  fake.activate();
+  await fake.settle();
+  await fake.commands['retroLooks.install']();
+
+  fs.writeFileSync(box.marker('powershell'), 'Retro Looks for Windows Terminal');
+  box.runUninstallHook();
+  assert(!fs.existsSync(box.marker('vscode')), 'marker removed');
+  assert.strictEqual(box.registered(), box.fonts.length, 'fonts kept for the module');
+
+  fs.rmSync(box.marker('powershell'));
+  fs.writeFileSync(box.marker('vscode'), 'Retro Looks for VS Code');
+  box.runUninstallHook();
+  assert.strictEqual(box.registered(), 0, 'fonts removed');
+  assert(!fs.existsSync(path.dirname(box.usersDir)), 'no RetroLooks folder left behind');
+});
+
+test('fonts installed before markers existed are adopted when the extension starts', windowsOnly, async (t) => {
+  const box = useSandbox(t);
+  const { createFakeVscode } = require('./helpers/fake-vscode');
+  const fake = createFakeVscode();
+  fake.activate();
+  await fake.settle();
+  await fake.commands['retroLooks.install']();
+  fs.rmSync(box.marker('vscode'));
+
+  createFakeVscode().activate();
+  await fake.settle();
+  assert(fs.existsSync(box.marker('vscode')), 'marker added for already installed fonts');
 });

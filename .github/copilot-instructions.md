@@ -15,7 +15,8 @@ Key points, in case AGENTS.md isn't loaded:
 - Fonts live in `fonts/<id>/` with their license verbatim. Never modify font files or add fonts whose
   license doesn't allow redistribution.
 - Two projects: `vscode/` (the extension, fonts only) and `powershell/` (the RetroLooks module for Windows
-  Terminal). They share only the fonts; keep them installing to the same place under the same names.
+  Terminal). They share only the fonts: same place, same names, and a marker per project in
+  `%LOCALAPPDATA%\RetroLooks\font-users`; fonts are removed only when no marker is left.
 - Never edit `vscode/generated/` or the `version`/`contributes` of `vscode/package.json`; run the build.
 - Run `npm test` (and `tests/powershell/RetroLooks.tests.ps1` on Windows) before finishing; add tests for new behavior.
 - Be historically accurate, and ask rather than guess about how a machine really looked.

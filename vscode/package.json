@@ -47,6 +47,9 @@
   "activationEvents": [
     "onStartupFinished"
   ],
+  "scripts": {
+    "vscode:uninstall": "node ./uninstall.js"
+  },
   "contributes": {
     "themes": [
       {

@@ -5,13 +5,11 @@ const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 const { PRESETS, resolveColor, phosphorPalette, fillTemplate } = require('./palette');
+const retroFonts = require('./fonts');
 
 const SAVED_KEY = 'retroLooks.saved';
 const ACTIVE_KEY = 'retroLooks.activeLook'; // id of the look applied by the extension, if any
 const REMIND_DISMISSED_KEY = 'retroLooks.installReminderDismissed'; // per machine: fonts are per machine
-// The tests point this at a throwaway key (and LOCALAPPDATA at a temporary folder).
-const FONT_REG_KEY = process.env.RETRO_LOOKS_TEST_FONT_KEY || 'HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
-const FONT_REG_KEY_MACHINE = 'HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
 const isWindows = process.platform === 'win32';
 
 let extensionPath;
@@ -206,7 +204,7 @@ async function setColor(context, looks) {
 
 async function applyLook(context, look) {
   let installFonts = false;
-  if (isWindows && !(await isFontInstalled(look.font))) {
+  if (isWindows && !(await retroFonts.isFontInstalled(look.font))) {
     const choice = await vscode.window.showWarningMessage(
       `The "${look.font.family}" font isn't installed yet.`,
       'Install Fonts', 'Apply Anyway'
@@ -276,25 +274,11 @@ async function migrateOldLooks(context, looks) {
 
 // ---------- Windows font install ----------
 
-// The same place, file names and registry names as the RetroLooks PowerShell module (both come from the
-// build's fonts.json), so either one can install fonts the other finds.
-const fontDir = () => path.join(process.env.LOCALAPPDATA, 'Microsoft', 'Windows', 'Fonts');
-// Present while Retro Looks for Windows Terminal (the PowerShell module) is installed.
-const terminalFragmentDir = () => path.join(process.env.LOCALAPPDATA, 'Microsoft', 'Windows Terminal', 'Fragments', 'Retro Looks');
-
-async function registryHasValue(key, name) {
-  try {
-    await run('reg', ['query', key, '/v', name]);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function isFontInstalled(font) {
-  return (await registryHasValue(FONT_REG_KEY, font.registryName))
-    || (await registryHasValue(FONT_REG_KEY_MACHINE, font.registryName));
-}
+// The fonts live in fonts.js, shared with the uninstall hook. They're installed in the same place and
+// under the same names as by the RetroLooks PowerShell module, and each project leaves a marker, so
+// uninstalling one never removes fonts the other still uses.
+const MARKER_DESCRIPTION = () => `Retro Looks for VS Code ${require('./package.json').version}`;
+const USER_NAMES = { powershell: 'Retro Looks for Windows Terminal (the RetroLooks PowerShell module)' };
 
 async function install() {
   if (!isWindows) {
@@ -305,14 +289,7 @@ async function install() {
     if (choice) openFonts();
     return;
   }
-  fs.mkdirSync(fontDir(), { recursive: true });
-  for (const font of readJson(generated('fonts.json'))) {
-    const source = generated('fonts', font.id, font.file);
-    const dest = path.join(fontDir(), font.installedFile);
-    // Installed fonts may be locked by running apps; identical files don't need copying.
-    if (!fs.existsSync(dest) || fs.statSync(dest).size !== fs.statSync(source).size) fs.copyFileSync(source, dest);
-    await run('reg', ['add', FONT_REG_KEY, '/v', font.registryName, '/t', 'REG_SZ', '/d', dest, '/f']);
-  }
+  await retroFonts.installFonts(readJson(generated('fonts.json')), generated('fonts'), MARKER_DESCRIPTION());
 
   // A running VS Code keeps the font list it loaded at startup; reloading the window doesn't refresh it,
   // and extensions can't relaunch VS Code, so the best we can offer is quitting.
@@ -331,33 +308,32 @@ async function uninstall(context, looks) {
   await restore(context, looks, true);
   // Someone who just removed the fonts doesn't want to be asked to install them at the next startup.
   await context.globalState.update(REMIND_DISMISSED_KEY, true);
+  retroFonts.removeMarker();
 
-  if (fs.existsSync(terminalFragmentDir())) {
+  const others = retroFonts.otherFontUsers();
+  if (others.length) {
+    const names = others.map((name) => USER_NAMES[name] ?? name).join(', ');
     const choice = await vscode.window.showInformationMessage(
-      'Retro Looks for Windows Terminal is installed and uses the same fonts, so they were kept. '
-        + 'Run Uninstall-RetroLooks in PowerShell to remove it, fonts included.',
+      `Retro Looks: the fonts are still used by ${names}, so they were kept.`,
       'Remove Fonts Anyway'
     );
     if (choice !== 'Remove Fonts Anyway') return;
   }
 
-  const locked = [];
-  for (const font of readJson(generated('fonts.json'))) {
-    // Only remove registrations that point at our own file, not a copy the user installed themselves.
-    try {
-      const out = await run('reg', ['query', FONT_REG_KEY, '/v', font.registryName]);
-      if (out.includes(font.installedFile)) await run('reg', ['delete', FONT_REG_KEY, '/v', font.registryName, '/f']);
-    } catch { /* not registered */ }
-    try {
-      fs.rmSync(path.join(fontDir(), font.installedFile), { force: true });
-    } catch {
-      locked.push(font.installedFile);
-    }
-  }
+  const locked = await retroFonts.removeFonts(readJson(generated('fonts.json')));
   const suffix = locked.length
-    ? ` These font files are in use and couldn't be deleted; they're no longer registered and can be deleted from ${fontDir()} later: ${locked.join(', ')}.`
+    ? ` These font files are in use and couldn't be deleted; they're no longer registered and can be deleted from ${retroFonts.fontDir()} later: ${locked.join(', ')}.`
     : '';
   vscode.window.showInformationMessage(`Retro Looks: fonts removed.${suffix}`);
+}
+
+// Installations from before the markers existed: if the fonts are installed and the extension has no
+// marker yet, it adopts them, so uninstalling the other project won't remove them.
+async function adoptInstalledFonts() {
+  if (!isWindows || retroFonts.hasMarker()) return;
+  const fonts = readJson(generated('fonts.json'));
+  const installed = await Promise.all(fonts.map(retroFonts.isFontInstalled));
+  if (installed.every(Boolean)) retroFonts.addMarker(MARKER_DESCRIPTION());
 }
 
 function openFonts() {
@@ -381,7 +357,7 @@ async function remindToInstall(context) {
   }
 
   const fonts = readJson(generated('fonts.json'));
-  const installed = await Promise.all(fonts.map(isFontInstalled));
+  const installed = await Promise.all(fonts.map(retroFonts.isFontInstalled));
   if (installed.every(Boolean)) return;
 
   const choice = await vscode.window.showInformationMessage(
@@ -415,7 +391,9 @@ function activate(context) {
   }));
 
   migrateOldLooks(context, looks).catch((err) => console.error('Retro Looks: migration failed', err));
-  remindToInstall(context).catch((err) => console.error('Retro Looks: install reminder failed', err));
+  adoptInstalledFonts()
+    .then(() => remindToInstall(context))
+    .catch((err) => console.error('Retro Looks: font check failed', err));
 }
 
 // `_internal` is for the tests only.

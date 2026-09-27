@@ -31,10 +31,10 @@ $paths = @{
     Fonts      = Join-Path $sandbox 'fonts'
     FontKey    = "$testKey\Fonts"
     Fragment   = Join-Path $sandbox 'Fragments\Retro Looks'
-    Extensions = Join-Path $sandbox 'vscode-extensions'
+    FontUsers  = Join-Path $sandbox 'RetroLooks\font-users'
 }
 $fragmentFile = Join-Path $paths.Fragment 'retro-looks.json'
-New-Item -ItemType Directory -Force $sandbox, $paths.Extensions | Out-Null
+New-Item -ItemType Directory -Force $sandbox | Out-Null
 
 try {
     Import-Module (Join-Path $package 'RetroLooks\RetroLooks.psd1') -Force
@@ -42,11 +42,13 @@ try {
     & $module {
         param($p)
         $script:FontDir = $p.Fonts; $script:FontKey = $p.FontKey; $script:FragmentDir = $p.Fragment
-        $script:EditorExtensionDirs = @($p.Extensions)
+        $script:FontUsersDir = $p.FontUsers
     } $paths
     $fonts = & $module { Get-RetroFont }
     $registered = { $k = Get-ItemProperty $paths.FontKey -ErrorAction SilentlyContinue; @($fonts | Where-Object { $k -and $k.($_.registryName) }) }
-    $extensionDir = Join-Path $paths.Extensions 'zmbq.vscode-retro-0.2.0'
+    $ownMarker = Join-Path $paths.FontUsers 'powershell'
+    # The marker the VS Code extension leaves (see vscode/fonts.js).
+    $vscodeMarker = Join-Path $paths.FontUsers 'vscode'
 
     Write-Host '-- Install-RetroLooks'
     Install-RetroLooks 6>$null | Out-Null
@@ -55,6 +57,7 @@ try {
         Check ($value -eq (Join-Path $paths.Fonts $font.installedFile) -and (Test-Path $value)) "font registered and copied: $($font.family)"
     }
     Check (Test-Path $fragmentFile) 'Terminal fragment written'
+    Check ((Test-Path $ownMarker) -and ((Get-Content $ownMarker -Raw) -match 'RetroLooks module \d')) 'font-user marker written'
     $fragment = Get-Content $fragmentFile -Raw | ConvertFrom-Json
     $schemes = @($fragment.schemes | ForEach-Object { $_.name })
     $dpi = & $module { Get-DisplayDpi }
@@ -75,17 +78,22 @@ try {
     Check ((@($written.profiles | ForEach-Object { $_.font.size }) -join ',') -eq (@($source.profiles | ForEach-Object { $_.font.size }) -join ',')) 'nominal font sizes kept'
 
     Write-Host '-- fonts shared with the VS Code extension'
-    New-Item -ItemType Directory -Force $extensionDir | Out-Null
-    Uninstall-RetroLooks 6>$null | Out-Null
+    'Retro Looks for VS Code' | Set-Content $vscodeMarker
+    $message = Uninstall-RetroLooks 6>&1 | Out-String
     Check (-not (Test-Path $paths.Fragment)) 'Terminal fragment removed'
-    Check ((& $registered).Count -eq $fonts.Count) 'fonts kept while the VS Code extension is installed'
+    Check (-not (Test-Path $ownMarker)) 'own marker removed'
+    Check ((& $registered).Count -eq $fonts.Count) 'fonts kept while the VS Code extension uses them'
+    Check ($message -match 'VS Code extension still uses them') 'user is told why'
+    Check (Test-Path $vscodeMarker) "the extension's marker is left alone"
+    Install-RetroLooks 6>$null | Out-Null
     Uninstall-RetroLooks -RemoveFonts 6>$null | Out-Null
     Check ((& $registered).Count -eq 0) '-RemoveFonts removes them anyway'
-    Remove-Item $extensionDir -Recurse
+    Remove-Item $vscodeMarker
     Install-RetroLooks 6>$null | Out-Null
     Uninstall-RetroLooks 6>$null | Out-Null
-    Check ((& $registered).Count -eq 0) 'fonts removed when the VS Code extension is not installed'
+    Check ((& $registered).Count -eq 0) 'fonts removed when nothing else uses them'
     Check (@(Get-ChildItem $paths.Fonts -ErrorAction SilentlyContinue).Count -eq 0) 'font files deleted'
+    Check (-not (Test-Path (Split-Path $paths.FontUsers))) 'no RetroLooks folder left behind'
 
     Write-Host '-- cleans up a v0.1 installation'
     New-Item -ItemType Directory -Force $paths.Fragment, $paths.Fonts | Out-Null

@@ -10,8 +10,9 @@
 - Windows Terminal: a color scheme for every preset color of every monochrome look.
 - **Two independent parts.** Windows Terminal support is now the **RetroLooks PowerShell module**
   (`Install-RetroLooks`, `Uninstall-RetroLooks`), installed by the same one-line command. The VS Code
-  extension installs fonts only (**Retro: Install Fonts**). Both share the fonts, and uninstalling one
-  keeps them while the other still uses them.
+  extension installs fonts only (**Retro: Install Fonts**). Both share the fonts: each leaves a marker
+  in `%LOCALAPPDATA%\RetroLooks\font-users`, and the fonts are only removed when neither uses them.
+  Uninstalling the extension from the Extensions view now removes its fonts too.
 - Tests (`npm test`, `tests/powershell/RetroLooks.tests.ps1`), run in CI on Linux and Windows before
   every build and release.
 

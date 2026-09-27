@@ -22,7 +22,10 @@ matching color schemes. People will often ask you to **add a new look** ("add a 
   Both must keep working on Windows PowerShell 5.1 (no `??`, no ternaries, no `&&`; and 5.1's
   `ConvertFrom-Json` returns a JSON array as one object, so enumerate it explicitly).
 - The two projects share only the fonts: same folder, file names and registry names (from the build's
-  `fonts.json`). Each keeps the fonts on uninstall while the other still uses them. Keep it that way.
+  `fonts.json`). Each project that uses the fonts leaves a marker file in `%LOCALAPPDATA%\RetroLooks\font-users`
+  (`vscode/fonts.js`, `RetroLooks.psm1`); uninstalling removes its own marker and removes the fonts only if
+  no marker is left. Keep it that way, and give any new installer its own marker. The extension's
+  `vscode/uninstall.js` (VS Code's `vscode:uninstall` hook) does the same when it's removed from the Extensions view.
 - The product version lives in the root `package.json`; the build copies it to both projects.
 
 ## Commands
