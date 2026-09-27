@@ -6,6 +6,7 @@ const path = require('path');
 const { execFile } = require('child_process');
 
 const SAVED_KEY = 'retroLooks.saved';
+const REMIND_DISMISSED_KEY = 'retroLooks.installReminderDismissed'; // per machine: fonts are per machine
 const FONT_REG_KEY = 'HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
 const FONT_REG_KEY_MACHINE = 'HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
 const isWindows = process.platform === 'win32';
@@ -177,12 +178,44 @@ async function uninstall(context) {
     }
   }
   fs.rmSync(fragmentDir, { recursive: true, force: true });
-  const suffix = locked.length ? ` Some font files are in use and will be removed after a restart: ${locked.join(', ')}.` : '';
+  // Someone who just removed the fonts doesn't want to be asked to install them at the next startup.
+  await context.globalState.update(REMIND_DISMISSED_KEY, true);
+  const suffix = locked.length
+    ? ` These font files are in use and couldn't be deleted; they're no longer registered and can be deleted from ${windowsPaths().fontDir} later: ${locked.join(', ')}.`
+    : '';
   vscode.window.showInformationMessage(`Retro Looks: fonts and Windows Terminal profiles removed.${suffix}`);
 }
 
 function openFonts() {
   vscode.env.openExternal(vscode.Uri.file(generated('fonts')));
+}
+
+// ---------- startup reminder ----------
+
+async function remindToInstall(context) {
+  if (context.globalState.get(REMIND_DISMISSED_KEY)) return;
+
+  if (!isWindows) {
+    // Font installation can't be checked outside Windows yet, so just point at the fonts once.
+    await context.globalState.update(REMIND_DISMISSED_KEY, true);
+    const choice = await vscode.window.showInformationMessage(
+      'Retro Looks needs its fonts installed. Install them with your system\'s font installer.',
+      'Open Fonts Folder'
+    );
+    if (choice) openFonts();
+    return;
+  }
+
+  const fonts = readJson(generated('fonts.json'));
+  const installed = await Promise.all(fonts.map(isFontInstalled));
+  if (installed.every(Boolean)) return;
+
+  const choice = await vscode.window.showInformationMessage(
+    'Retro Looks: install the retro fonts and Windows Terminal profiles? The looks need them.',
+    'Install', 'Later', 'Don\'t Show Again'
+  );
+  if (choice === 'Install') await install();
+  else if (choice === 'Don\'t Show Again') await context.globalState.update(REMIND_DISMISSED_KEY, true);
 }
 
 // ---------- activation ----------
@@ -198,6 +231,8 @@ function activate(context) {
   register('retroLooks.install', () => install());
   register('retroLooks.uninstall', () => uninstall(context));
   register('retroLooks.openFonts', () => openFonts());
+
+  remindToInstall(context).catch((err) => console.error('Retro Looks: install reminder failed', err));
 }
 
 module.exports = { activate, deactivate() {} };

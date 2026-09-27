@@ -44,6 +44,9 @@
   "extensionKind": [
     "ui"
   ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "contributes": {
     "themes": [
       {
