@@ -76,8 +76,11 @@ and select it in the profile's Appearance settings.
 (Claude Code, GitHub Copilot, …) to "add a white phosphor Apple //e look". The repo includes instructions
 for them ([AGENTS.md](AGENTS.md)), and monochrome looks only need one color.
 
-To use a different font size, change `editor.fontSize` / `terminal.integrated.fontSize` after applying
-a look. Pixel fonts look sharpest at particular sizes, so try a few.
+**Font size:** pixel fonts are only sharp when every font pixel covers a whole number of screen pixels.
+On Windows, the extension reads your display scaling (and VS Code's zoom level) and picks the sharp
+size closest to the look's size, e.g. 21.333 at 150% scaling. Turn this off with the
+`retroLooks.pixelPerfectFontSize` setting, or change `editor.fontSize` / `terminal.integrated.fontSize`
+after applying a look.
 
 ## Credits and licenses
 

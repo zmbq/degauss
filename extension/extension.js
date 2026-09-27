@@ -21,17 +21,46 @@ function run(command, args) {
   });
 }
 
+// ---------- font size ----------
+
+// Screen pixels per CSS pixel: Windows display scaling times VS Code's own zoom (each zoom level is 20%).
+// Other platforms don't expose the scaling to extensions, so they assume 1.
+async function displayScale() {
+  let scale = 1;
+  if (isWindows) {
+    try {
+      const out = await run('reg', ['query', 'HKCU\\Control Panel\\Desktop\\WindowMetrics', '/v', 'AppliedDPI']);
+      const dpi = parseInt(out.match(/REG_DWORD\s+0x([0-9a-f]+)/i)?.[1] ?? '', 16);
+      if (dpi > 0) scale = dpi / 96;
+    } catch { /* keep 1 */ }
+  }
+  const zoomLevel = vscode.workspace.getConfiguration('window').get('zoomLevel') ?? 0;
+  return scale * Math.pow(1.2, zoomLevel);
+}
+
+// Pixel fonts are only sharp when each font pixel covers a whole number of screen pixels, so pick the
+// size closest to the look's nominal size for which fontSize * scale is a multiple of the font's grid.
+async function fontSizeFor(look) {
+  const target = look.vscode.fontSize;
+  const grid = look.font.pixelsPerEm;
+  if (!grid || !vscode.workspace.getConfiguration('retroLooks').get('pixelPerfectFontSize')) return target;
+  const scale = await displayScale();
+  const multiple = Math.max(1, Math.round((target * scale) / grid));
+  return Math.round(((multiple * grid) / scale) * 1000) / 1000;
+}
+
 // ---------- settings ----------
 
-function lookSettings(look) {
+async function lookSettings(look) {
+  const fontSize = await fontSizeFor(look);
   return {
     'window.autoDetectColorScheme': false, // otherwise the OS light/dark preference overrides the theme
     'workbench.colorTheme': look.theme,
     'editor.fontFamily': look.fontFamily,
-    'editor.fontSize': look.vscode.fontSize,
+    'editor.fontSize': fontSize,
     'editor.cursorStyle': look.vscode.cursorStyle,
     'terminal.integrated.fontFamily': look.fontFamily,
-    'terminal.integrated.fontSize': look.vscode.fontSize,
+    'terminal.integrated.fontSize': fontSize,
     'terminal.integrated.cursorStyle': look.vscode.cursorStyle === 'underline' ? 'underline' : 'block',
   };
 }
@@ -57,7 +86,7 @@ async function applyLook(context, look) {
     if (!choice) return;
     installFonts = choice === 'Install Fonts';
   }
-  const settings = lookSettings(look);
+  const settings = await lookSettings(look);
   await saveOriginals(context, Object.keys(settings));
   const config = vscode.workspace.getConfiguration();
   for (const [key, value] of Object.entries(settings)) {

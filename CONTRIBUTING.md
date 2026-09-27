@@ -43,6 +43,11 @@ Generated files (`extension/generated`, `dist`) are not committed.
    }
    ```
 
+   For a pixel font, also add `"pixelsPerEm"`: how many font pixels tall one em is (the font's
+   units-per-em divided by the size of one pixel in font units; 16 for the existing pixel fonts).
+   The extension uses it to pick font sizes that land on whole screen pixels, which keeps the font
+   sharp. Leave it out for fonts that aren't built on a pixel grid.
+
    `family` must be the name Windows shows for the font, since that's what the settings refer to.
    Don't modify font files; several licenses forbid it.
 

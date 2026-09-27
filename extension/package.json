@@ -98,6 +98,16 @@
         "command": "retroLooks.openFonts",
         "title": "Retro: Open Bundled Fonts Folder"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Retro Looks",
+      "properties": {
+        "retroLooks.pixelPerfectFontSize": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Adjust the font size of pixel fonts to your display scaling so every font pixel covers a whole number of screen pixels. This keeps them sharp; turn it off to use each look's nominal size."
+        }
+      }
+    }
   }
 }

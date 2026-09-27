@@ -1,6 +1,7 @@
 {
   "family": "PxPlus IBM VGA 9x16",
   "file": "PxPlus_IBM_VGA_9x16.ttf",
+  "pixelsPerEm": 16,
   "license": "LICENSE.txt",
   "licenseName": "CC BY-SA 4.0",
   "author": "VileR (The Ultimate Oldschool PC Font Pack)",

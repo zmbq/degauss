@@ -140,7 +140,10 @@ function buildExtension(allLooks, fonts) {
       name: l.name,
       description: l.description,
       theme: l.name,
-      font: { id: f.id, family: f.family, file: f.file, installedFile: FONT_FILE_PREFIX + f.file, registryName: registryName(f.family) },
+      font: {
+        id: f.id, family: f.family, file: f.file, installedFile: FONT_FILE_PREFIX + f.file,
+        registryName: registryName(f.family), pixelsPerEm: f.pixelsPerEm ?? null,
+      },
       fontFamily: `'${f.family}', Consolas, monospace`,
       vscode: l.vscode,
     };
@@ -165,6 +168,16 @@ function buildExtension(allLooks, fonts) {
       { command: 'retroLooks.uninstall', title: 'Retro: Uninstall Fonts and Windows Terminal Profiles' },
       { command: 'retroLooks.openFonts', title: 'Retro: Open Bundled Fonts Folder' },
     ],
+    configuration: {
+      title: 'Retro Looks',
+      properties: {
+        'retroLooks.pixelPerfectFontSize': {
+          type: 'boolean',
+          default: true,
+          markdownDescription: 'Adjust the font size of pixel fonts to your display scaling so every font pixel covers a whole number of screen pixels. This keeps them sharp; turn it off to use each look\'s nominal size.',
+        },
+      },
+    },
   };
   writeJson(pkgFile, pkg);
   return pkg.version;

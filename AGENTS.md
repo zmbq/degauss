@@ -43,7 +43,9 @@ monochrome look, so check them all.
 
 1. **Font first.** Find a font that recreates the machine's actual character set, and confirm from its
    license text that redistribution is allowed. Add it under `fonts/<font-id>/` with `font.json`
-   (see an existing one) and the license **verbatim** as `LICENSE.txt`. `family` must be the exact
+   (see an existing one) and the license **verbatim** as `LICENSE.txt`. For a pixel font, set
+   `pixelsPerEm` (units-per-em ÷ one pixel's size in font units) so the extension can size it sharply;
+   read the numbers from the font's `head`/`hmtx` tables rather than guessing. `family` must be the exact
    family name inside the font file. If you can't verify the license, stop and tell the user.
    Never modify, rename or re-encode font files.
 2. Create `looks/<look-id>/look.json` like the existing ones, with a new GUID.
