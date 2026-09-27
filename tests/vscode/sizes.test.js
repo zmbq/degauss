@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { createFakeVscode } = require('./helpers/fake-vscode');
 
-const { computeSizes, sharpPoints } = createFakeVscode().activate()._internal;
+const { computeSizes } = createFakeVscode().activate()._internal;
 // Sizes are rounded to 3 decimals (21.333, not 21.3333...), so allow for that.
 const isWhole = (x) => Math.abs(x - Math.round(x)) < 1e-3;
 const SCALES = [1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 3];
@@ -29,16 +29,4 @@ test('line heights are whole screen pixels with the text centered on a whole pix
 test('known values', () => {
   assert.deepStrictEqual(computeSizes(20, 16, 1.5), { fontSize: 21.333, lineHeight: 28 });
   assert.deepStrictEqual(computeSizes(20, 16, 1), { fontSize: 16, lineHeight: 22 });
-});
-
-test('Windows Terminal point sizes are sharp', () => {
-  for (const dpi of [96, 120, 144, 168, 192]) {
-    for (const points of [12, 14, 16]) {
-      const sharp = sharpPoints(points, 16, dpi);
-      assert(isWhole((sharp * dpi) / 72 / 16), `${dpi} DPI: ${points}pt -> ${sharp}pt`);
-    }
-  }
-  assert.strictEqual(sharpPoints(16, 16, 144), 16);
-  assert.strictEqual(sharpPoints(12, 16, 144), 16);
-  assert.strictEqual(sharpPoints(16, 16, 96), 12);
 });

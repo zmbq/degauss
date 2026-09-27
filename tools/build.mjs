@@ -1,8 +1,9 @@
-// Builds everything from looks/ and fonts/:
-//   extension/generated/...      themes, looks.json, fonts, Windows Terminal fragment (packaged into the VSIX)
-//   extension/package.json       "contributes" section (themes + commands) is rewritten
-//   dist/terminal/ + dist/retro-looks-terminal.zip (+ .sha256)   the standalone Windows Terminal installer
-// Usage: node tools/build.mjs
+// Builds both projects from looks/ and fonts/:
+//   vscode/generated/...                  themes, templates, looks.json, fonts (packaged into the VSIX)
+//   vscode/package.json                   version and "contributes" section (themes + commands) are rewritten
+//   dist/powershell/ + dist/retro-looks-powershell.zip (+ .sha256)
+//                                         the RetroLooks PowerShell module (Windows Terminal) and its installer
+// The product version lives in the root package.json. Usage: node tools/build.mjs
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -11,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 // The color math is shared with the extension, which recolors monochrome looks at runtime.
-const { PRESETS, resolveColor, phosphorPalette, fillTemplate } = createRequire(import.meta.url)('../extension/palette.js');
+const { PRESETS, resolveColor, phosphorPalette, fillTemplate } = createRequire(import.meta.url)('../vscode/palette.js');
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const p = (...parts) => path.join(root, ...parts);
@@ -21,7 +22,8 @@ const writeJson = (file, data) => {
   fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
 };
 
-// Registry value names and installed file names are shared with installer/install.ps1 — keep in sync.
+// Both projects install the fonts under these names, so either one can find and remove them.
+// The PowerShell module and the extension read them from the generated fonts.json.
 const FONT_FILE_PREFIX = 'RetroLooks-';
 const registryName = (family) => `${family} (TrueType)`;
 
@@ -75,31 +77,14 @@ function loadLooks(fonts) {
   return looks.sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.id.localeCompare(b.id));
 }
 
-// ---------- outputs ----------
+// ---------- shared outputs ----------
 
-function terminalFragment(looks, fonts) {
-  return {
-    $help: 'Retro Looks for Windows Terminal — https://github.com/zmbq/vscode-retro',
-    schemes: looks.flatMap((l) => l.schemes),
-    profiles: looks.map((l) => ({
-      guid: l.terminal.guid,
-      name: l.name,
-      // commandline is filled in at install time (pwsh.exe if present, otherwise powershell.exe)
-      startingDirectory: '%USERPROFILE%',
-      colorScheme: l.defaultScheme,
-      font: { face: fonts[l.font].family, size: l.terminal.fontSize },
-      cursorShape: l.terminal.cursorShape,
-      padding: l.terminal.padding,
-    })),
-  };
-}
-
-function thirdPartyNotices(fonts) {
-  const lines = ['# Third-party notices', '', 'The fonts bundled with Retro Looks are the work of their authors and keep their own licenses.', ''];
-  for (const f of Object.values(fonts)) {
-    lines.push(`## ${f.family}`, '', `- Author: ${f.author}`, `- Source: ${f.url}`, `- License: ${f.licenseName}`, `- Full license text: fonts/${f.id}/${f.license}`, '');
-  }
-  return lines.join('\n');
+// The font list both projects install from, with the names they install under.
+function fontList(fonts) {
+  return Object.values(fonts).map((f) => ({
+    id: f.id, family: f.family, file: f.file, installedFile: FONT_FILE_PREFIX + f.file,
+    registryName: registryName(f.family), pixelsPerEm: f.pixelsPerEm ?? null,
+  }));
 }
 
 function copyFonts(fonts, destRoot) {
@@ -110,11 +95,21 @@ function copyFonts(fonts, destRoot) {
   }
 }
 
-function buildExtension(allLooks, fonts) {
-  // Every font is bundled (the extension also installs the Terminal-only looks), but only looks with
-  // a "vscode" section get a theme and a command.
+function thirdPartyNotices(fonts) {
+  const lines = ['# Third-party notices', '', 'The fonts bundled with Retro Looks are the work of their authors and keep their own licenses.', ''];
+  for (const f of Object.values(fonts)) {
+    lines.push(`## ${f.family}`, '', `- Author: ${f.author}`, `- Source: ${f.url}`, `- License: ${f.licenseName}`, `- Full license text: fonts/${f.id}/${f.license}`, '');
+  }
+  return lines.join('\n');
+}
+
+// ---------- VS Code extension ----------
+
+function buildVscode(allLooks, fonts, version) {
+  // Every font is bundled (the extension installs all of them), but only looks with a "vscode" section
+  // get a theme and a command.
   const looks = allLooks.filter((l) => l.vscode);
-  const ext = p('extension');
+  const ext = p('vscode');
   const gen = path.join(ext, 'generated');
   fs.rmSync(gen, { recursive: true, force: true });
 
@@ -125,7 +120,7 @@ function buildExtension(allLooks, fonts) {
     fs.copyFileSync(templateFile(style, 'vscode-theme'), path.join(gen, 'templates', `${style}-vscode-theme.json`));
   }
   copyFonts(fonts, path.join(gen, 'fonts'));
-  writeJson(path.join(gen, 'terminal', 'retro-looks.json'), terminalFragment(allLooks, fonts));
+  writeJson(path.join(gen, 'fonts.json'), fontList(fonts));
   writeJson(path.join(gen, 'looks.json'), looks.map((l) => {
     const f = fonts[l.font];
     return {
@@ -133,10 +128,7 @@ function buildExtension(allLooks, fonts) {
       name: l.name,
       description: l.description,
       theme: l.name,
-      font: {
-        id: f.id, family: f.family, file: f.file, installedFile: FONT_FILE_PREFIX + f.file,
-        registryName: registryName(f.family), pixelsPerEm: f.pixelsPerEm ?? null,
-      },
+      font: fontList({ [f.id]: f })[0],
       fontFamily: `'${f.family}', Consolas, monospace`,
       vscode: l.vscode,
       monochrome: l.monochrome
@@ -144,10 +136,6 @@ function buildExtension(allLooks, fonts) {
         : null,
     };
   }));
-  writeJson(path.join(gen, 'fonts.json'), Object.values(fonts).map((f) => ({
-    id: f.id, family: f.family, file: f.file, installedFile: FONT_FILE_PREFIX + f.file, registryName: registryName(f.family),
-    pixelsPerEm: f.pixelsPerEm ?? null,
-  })));
 
   // Marketplace files live at the repo root; vsce needs them next to package.json.
   for (const file of ['README.md', 'CHANGELOG.md', 'LICENSE']) fs.copyFileSync(p(file), path.join(ext, file));
@@ -155,6 +143,7 @@ function buildExtension(allLooks, fonts) {
 
   const pkgFile = path.join(ext, 'package.json');
   const pkg = readJson(pkgFile);
+  pkg.version = version;
   pkg.contributes = {
     themes: looks.map((l) => ({ label: l.name, uiTheme: 'vs-dark', path: `./generated/themes/${l.id}.json` })),
     commands: [
@@ -162,8 +151,8 @@ function buildExtension(allLooks, fonts) {
       ...looks.map((l) => ({ command: `retroLooks.apply.${l.id}`, title: `Retro: ${l.name}` })),
       { command: 'retroLooks.setColor', title: 'Retro: Set Phosphor Color…' },
       { command: 'retroLooks.off', title: 'Retro: Off (restore previous look)' },
-      { command: 'retroLooks.install', title: 'Retro: Install Fonts and Windows Terminal Profiles' },
-      { command: 'retroLooks.uninstall', title: 'Retro: Uninstall Fonts and Windows Terminal Profiles' },
+      { command: 'retroLooks.install', title: 'Retro: Install Fonts' },
+      { command: 'retroLooks.uninstall', title: 'Retro: Uninstall Fonts' },
       { command: 'retroLooks.openFonts', title: 'Retro: Open Bundled Fonts Folder' },
     ],
     configuration: {
@@ -187,32 +176,63 @@ function buildExtension(allLooks, fonts) {
     },
   };
   writeJson(pkgFile, pkg);
-  return pkg.version;
 }
 
-function buildTerminalZip(looks, fonts, version) {
-  const out = p('dist', 'terminal');
-  fs.rmSync(p('dist'), { recursive: true, force: true });
-  copyFonts(fonts, path.join(out, 'fonts'));
-  writeJson(path.join(out, 'retro-looks.json'), terminalFragment(looks, fonts));
-  fs.copyFileSync(p('installer', 'install.ps1'), path.join(out, 'install.ps1'));
-  fs.copyFileSync(p('LICENSE'), path.join(out, 'LICENSE'));
-  fs.writeFileSync(path.join(out, 'THIRD-PARTY-NOTICES.md'), thirdPartyNotices(fonts));
-  fs.writeFileSync(path.join(out, 'VERSION'), version + '\n');
+// ---------- PowerShell module (Windows Terminal) ----------
 
-  const zip = p('dist', 'retro-looks-terminal.zip');
+function terminalFragment(looks, fonts) {
+  return {
+    $help: 'Retro Looks for Windows Terminal — https://github.com/zmbq/vscode-retro',
+    schemes: looks.flatMap((l) => l.schemes),
+    profiles: looks.map((l) => ({
+      guid: l.terminal.guid,
+      name: l.name,
+      // commandline is filled in at install time (pwsh.exe if present, otherwise powershell.exe),
+      // and pixel fonts' sizes are adjusted to the display scaling.
+      startingDirectory: '%USERPROFILE%',
+      colorScheme: l.defaultScheme,
+      font: { face: fonts[l.font].family, size: l.terminal.fontSize },
+      cursorShape: l.terminal.cursorShape,
+      padding: l.terminal.padding,
+    })),
+  };
+}
+
+function buildPowerShell(looks, fonts, version) {
+  const out = p('dist', 'powershell');
+  const moduleDir = path.join(out, 'RetroLooks');
+  fs.rmSync(p('dist'), { recursive: true, force: true });
+
+  fs.mkdirSync(moduleDir, { recursive: true });
+  fs.copyFileSync(p('powershell', 'RetroLooks', 'RetroLooks.psm1'), path.join(moduleDir, 'RetroLooks.psm1'));
+  const manifest = fs.readFileSync(p('powershell', 'RetroLooks', 'RetroLooks.psd1'), 'utf8');
+  const placeholder = /(ModuleVersion\s*=\s*)'0\.0\.0'/;
+  if (!placeholder.test(manifest)) throw new Error("RetroLooks.psd1 must say ModuleVersion = '0.0.0' (the build fills it in)");
+  fs.writeFileSync(path.join(moduleDir, 'RetroLooks.psd1'), manifest.replace(placeholder, `$1'${version}'`));
+  copyFonts(fonts, path.join(moduleDir, 'fonts'));
+  writeJson(path.join(moduleDir, 'fonts.json'), fontList(fonts));
+  writeJson(path.join(moduleDir, 'retro-looks.json'), terminalFragment(looks, fonts));
+  for (const dir of [out, moduleDir]) {
+    fs.copyFileSync(p('LICENSE'), path.join(dir, 'LICENSE'));
+    fs.writeFileSync(path.join(dir, 'THIRD-PARTY-NOTICES.md'), thirdPartyNotices(fonts));
+  }
+  fs.copyFileSync(p('powershell', 'install.ps1'), path.join(out, 'install.ps1'));
+
+  const zip = p('dist', 'retro-looks-powershell.zip');
   if (process.platform === 'win32') {
     execFileSync('powershell', ['-NoProfile', '-Command', `Compress-Archive -Path '${out}\\*' -DestinationPath '${zip}' -Force`], { stdio: 'inherit' });
   } else {
     execFileSync('zip', ['-qr', zip, '.'], { cwd: out, stdio: 'inherit' });
   }
   const hash = crypto.createHash('sha256').update(fs.readFileSync(zip)).digest('hex');
-  fs.writeFileSync(zip + '.sha256', `${hash}  retro-looks-terminal.zip\n`);
+  fs.writeFileSync(zip + '.sha256', `${hash}  retro-looks-powershell.zip\n`);
 }
 
+const version = readJson(p('package.json')).version;
+if (!/^\d+\.\d+\.\d+$/.test(version ?? '')) throw new Error('package.json needs a "version" like 1.2.3');
 const fonts = loadFonts();
 const looks = loadLooks(fonts);
-const version = buildExtension(looks, fonts);
-buildTerminalZip(looks, fonts, version);
+buildVscode(looks, fonts, version);
+buildPowerShell(looks, fonts, version);
 const describe = (l) => (l.vscode ? l.name : `${l.name} [Terminal only]`);
 console.log(`Built ${looks.length} looks (${looks.map(describe).join(', ')}), ${Object.keys(fonts).length} fonts, version ${version}.`);

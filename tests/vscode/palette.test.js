@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { PRESETS, resolveColor, phosphorPalette, fillTemplate } = require('../extension/palette');
+const { PRESETS, resolveColor, phosphorPalette, fillTemplate } = require('../../vscode/palette');
 
 test('presets resolve by name, in any case', () => {
   for (const [name, hex] of Object.entries(PRESETS)) {

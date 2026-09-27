@@ -1,10 +1,10 @@
 // A fake `vscode` module for testing extension.js without VS Code: in-memory user settings (with the
-// defaults declared in extension/package.json), scripted answers for pickers, and captured messages.
+// defaults declared in vscode/package.json), scripted answers for pickers, and captured messages.
 const Module = require('node:module');
 const path = require('node:path');
 const assert = require('node:assert');
 
-const EXTENSION_DIR = path.join(__dirname, '..', '..', 'extension');
+const EXTENSION_DIR = path.join(__dirname, '..', '..', '..', 'vscode');
 
 function createFakeVscode() {
   const pkg = require(path.join(EXTENSION_DIR, 'package.json'));

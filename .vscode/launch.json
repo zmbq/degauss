@@ -5,7 +5,7 @@
       "name": "Run Retro Looks",
       "type": "extensionHost",
       "request": "launch",
-      "args": ["--extensionDevelopmentPath=${workspaceFolder}/extension"],
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}/vscode"],
       "preLaunchTask": "build"
     }
   ]

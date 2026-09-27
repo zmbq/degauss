@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag like v0.1.0 (matching extension/package.json "version") to publish a release.
+# Push a tag like v0.2.0 (matching the root package.json "version") to publish a release.
 on:
   push:
     tags: ['v*']
@@ -26,21 +26,21 @@ jobs:
 
       - name: Check tag matches extension version
         run: |
-          version=$(node -p "require('./extension/package.json').version")
+          version=$(node -p "require('./package.json').version")
           if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match extension/package.json version $version"; exit 1
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $version"; exit 1
           fi
 
       - run: node tools/build.mjs
       - run: npx --yes @vscode/vsce@3 package -o ../dist/
-        working-directory: extension
+        working-directory: vscode
 
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" --title "Retro Looks $GITHUB_REF_NAME" --generate-notes \
-            dist/*.vsix dist/retro-looks-terminal.zip dist/retro-looks-terminal.zip.sha256 installer/install.ps1
+            dist/*.vsix dist/retro-looks-powershell.zip dist/retro-looks-powershell.zip.sha256 powershell/install.ps1
 
       - name: Publish to VS Code Marketplace
         if: env.VSCE_PAT != ''

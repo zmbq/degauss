@@ -2,7 +2,7 @@
   "name": "vscode-retro",
   "displayName": "Retro Looks",
   "description": "Vintage computer looks for VS Code and Windows Terminal: Apple //e green and amber and IBM 3270 ISPF, with period fonts. Windows Terminal also gets IBM PS/2 VGA.",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "zmbq",
   "license": "MIT",
   "icon": "icon.png",
@@ -92,11 +92,11 @@
       },
       {
         "command": "retroLooks.install",
-        "title": "Retro: Install Fonts and Windows Terminal Profiles"
+        "title": "Retro: Install Fonts"
       },
       {
         "command": "retroLooks.uninstall",
-        "title": "Retro: Uninstall Fonts and Windows Terminal Profiles"
+        "title": "Retro: Uninstall Fonts"
       },
       {
         "command": "retroLooks.openFonts",

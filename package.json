@@ -1,10 +1,11 @@
 {
   "name": "vscode-retro-build",
+  "version": "0.2.0",
   "private": true,
-  "description": "Build scripts for Retro Looks. The extension itself is in extension/.",
+  "description": "Build scripts and tests for Retro Looks: the VS Code extension (vscode/) and the PowerShell module for Windows Terminal (powershell/).",
   "scripts": {
     "build": "node tools/build.mjs",
     "test": "node tools/build.mjs && node --test \"tests/**/*.test.js\"",
-    "package": "node tools/build.mjs && cd extension && npx --yes @vscode/vsce@3 package -o ../dist/"
+    "package": "node tools/build.mjs && cd vscode && npx --yes @vscode/vsce@3 package -o ../dist/"
   }
 }

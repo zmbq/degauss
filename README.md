@@ -1,7 +1,8 @@
 # Retro Looks
 
 Vintage computer looks for **VS Code** and **Windows Terminal**: period-correct fonts and color schemes
-from the machines we grew up on.
+from the machines we grew up on. There are two independent parts: a VS Code extension and a PowerShell
+module for Windows Terminal. Use either or both; they share the same fonts.
 
 | Look | Font | What it looks like |
 |---|---|---|
@@ -25,8 +26,8 @@ Install **Retro Looks** from the Marketplace (or Open VSX), then open the Comman
 - **Retro: Off** puts back exactly what you had before. Your chosen colors are remembered for next time.
 - On Windows, the extension offers to install its fonts when VS Code starts (for your user only,
   no admin needed), until you install them or choose **Don't Show Again**. You can also run
-  **Retro: Install Fonts and Windows Terminal Profiles**, which installs the fonts plus the
-  Windows Terminal profiles.
+  **Retro: Install Fonts**. **Retro: Uninstall Fonts** removes them, unless Retro Looks for Windows
+  Terminal still uses them.
 - On macOS and Linux, run **Retro: Open Bundled Fonts Folder** and install the fonts with your
   system's font installer. Automatic installation there is on the [roadmap](CONTRIBUTING.md#roadmap-and-where-help-is-wanted).
 - Works in Remote SSH, WSL and container windows: the extension runs on your local machine.
@@ -36,26 +37,30 @@ you can use any of the fonts with any theme.
 
 ## Windows Terminal
 
-Paste this into PowerShell:
+Windows Terminal support is the **RetroLooks PowerShell module**. Paste this into PowerShell:
 
 ```powershell
 irm https://github.com/zmbq/vscode-retro/releases/latest/download/install.ps1 | iex
 ```
 
-The installer sizes the pixel fonts for your display scaling so they stay sharp (add `-KeepFontSizes`
-to the script to skip that). Then close all Windows Terminal windows and reopen it. The looks appear as new profiles in the
-drop-down next to the **+** tab button. Nothing needs admin rights, and your `settings.json` isn't
-touched: the profiles are added as a [Terminal fragment](https://learn.microsoft.com/windows/terminal/json-fragment-extensions).
+It installs the module for both PowerShell 7 and Windows PowerShell, then runs `Install-RetroLooks`,
+which installs the fonts and adds the looks as Windows Terminal profiles. Pixel fonts are sized for your
+display scaling so they stay sharp (`Install-RetroLooks -KeepFontSizes` skips that). Then close all
+Windows Terminal windows and reopen it: the looks are in the drop-down next to the **+** tab button.
+Nothing needs admin rights, and your `settings.json` isn't touched: the profiles are added as a
+[Terminal fragment](https://learn.microsoft.com/windows/terminal/json-fragment-extensions).
 
-Prefer to read before you run? [Look at the script](installer/install.ps1), or download
-`retro-looks-terminal.zip` from the [latest release](https://github.com/zmbq/vscode-retro/releases/latest),
-unzip it and run `install.ps1`.
+Prefer to read before you run? [Look at the installer](powershell/install.ps1) and
+[the module](powershell/RetroLooks/RetroLooks.psm1), or download `retro-looks-powershell.zip` from the
+[latest release](https://github.com/zmbq/vscode-retro/releases/latest), unzip it and run `install.ps1`.
 
-To uninstall:
+To uninstall (fonts are kept if the VS Code extension still uses them; add `-RemoveFonts` to remove them anyway):
 
 ```powershell
 & ([scriptblock]::Create((irm https://github.com/zmbq/vscode-retro/releases/latest/download/install.ps1))) -Uninstall
 ```
+
+or, to keep the module and just remove the profiles and fonts, `Uninstall-RetroLooks`.
 
 On macOS and Linux, install the fonts (see above) and pick them in your terminal's settings. Retro
 color schemes for iTerm2, Ghostty, WezTerm, kitty, Alacritty and others are on the

@@ -1,17 +1,52 @@
-// Checks what the build produced (`npm test` runs the build first).
+// Checks what the build produced for both projects (`npm test` runs the build first).
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
-const { PRESETS } = require('../extension/palette');
+const { PRESETS } = require('../../vscode/palette');
 
-const root = path.join(__dirname, '..');
+const root = path.join(__dirname, '..', '..');
 const read = (...parts) => JSON.parse(fs.readFileSync(path.join(root, ...parts), 'utf8'));
+const exists = (...parts) => fs.existsSync(path.join(root, ...parts));
 
+const version = read('package.json').version;
 const looks = fs.readdirSync(path.join(root, 'looks')).map((id) => ({ id, ...read('looks', id, 'look.json') }));
-const fragment = read('extension', 'generated', 'terminal', 'retro-looks.json');
-const pkg = read('extension', 'package.json');
-const generatedLooks = read('extension', 'generated', 'looks.json');
+const pkg = read('vscode', 'package.json');
+const generatedLooks = read('vscode', 'generated', 'looks.json');
+const moduleDir = ['dist', 'powershell', 'RetroLooks'];
+const fragment = read(...moduleDir, 'retro-looks.json');
+
+test('both projects carry the product version from the root package.json', () => {
+  assert.strictEqual(pkg.version, version);
+  const manifest = fs.readFileSync(path.join(root, ...moduleDir, 'RetroLooks.psd1'), 'utf8');
+  assert.match(manifest, new RegExp(`ModuleVersion\\s*=\\s*'${version.replace(/\./g, '\\.')}'`));
+});
+
+test('both projects install the same fonts under the same names', () => {
+  const vscodeFonts = read('vscode', 'generated', 'fonts.json');
+  assert.deepStrictEqual(read(...moduleDir, 'fonts.json'), vscodeFonts);
+  for (const font of vscodeFonts) {
+    assert.strictEqual(font.installedFile, `RetroLooks-${font.file}`);
+    assert.strictEqual(font.registryName, `${font.family} (TrueType)`);
+    for (const file of [font.file, 'LICENSE.txt', 'font.json']) {
+      assert(exists('vscode', 'generated', 'fonts', font.id, file), `VS Code: ${font.id}/${file}`);
+      assert(exists(...moduleDir, 'fonts', font.id, file), `PowerShell: ${font.id}/${file}`);
+    }
+  }
+});
+
+test('the VS Code extension no longer ships Windows Terminal profiles', () => {
+  assert(!exists('vscode', 'generated', 'terminal'));
+  assert(!pkg.contributes.commands.some((c) => /Terminal/.test(c.title)), 'no Terminal commands');
+});
+
+test('the PowerShell package has the module, its installer and the licenses', () => {
+  for (const file of ['RetroLooks.psd1', 'RetroLooks.psm1', 'fonts.json', 'retro-looks.json', 'LICENSE', 'THIRD-PARTY-NOTICES.md']) {
+    assert(exists(...moduleDir, file), file);
+  }
+  for (const file of ['install.ps1', 'LICENSE', 'THIRD-PARTY-NOTICES.md']) assert(exists('dist', 'powershell', file), file);
+  assert(exists('dist', 'retro-looks-powershell.zip') && exists('dist', 'retro-looks-powershell.zip.sha256'));
+});
 
 test('every look has a Terminal profile with a unique GUID and an existing scheme', () => {
   const guids = fragment.profiles.map((p) => p.guid);
@@ -50,25 +85,17 @@ test('VS Code looks have a theme, a command and a template when monochrome', () 
     assert(commands.has(`retroLooks.apply.${look.id}`), `${look.id}: command`);
     const themePath = themes.get(look.theme);
     assert(themePath, `${look.id}: theme "${look.theme}" contributed`);
-    const theme = read('extension', themePath);
+    const theme = read('vscode', themePath);
     assert.strictEqual(theme.name, look.theme);
     assert(!JSON.stringify(theme).includes('${'), `${look.id}: no unfilled template slots`);
-    if (look.monochrome) assert(fs.existsSync(path.join(root, 'extension', 'generated', look.monochrome.template)), `${look.id}: template shipped`);
+    if (look.monochrome) assert(exists('vscode', 'generated', look.monochrome.template), `${look.id}: template shipped`);
   }
 });
 
 test('every command in package.json is registered by the extension', () => {
-  const source = fs.readFileSync(path.join(root, 'extension', 'extension.js'), 'utf8');
+  const source = fs.readFileSync(path.join(root, 'vscode', 'extension.js'), 'utf8');
   for (const { command } of pkg.contributes.commands) {
     if (command.startsWith('retroLooks.apply.')) continue; // registered in a loop over looks.json
     assert(source.includes(`'${command}'`), `${command} is registered`);
-  }
-});
-
-test('fonts are bundled with their licenses', () => {
-  for (const font of read('extension', 'generated', 'fonts.json')) {
-    for (const file of [font.file, 'LICENSE.txt', 'font.json']) {
-      assert(fs.existsSync(path.join(root, 'extension', 'generated', 'fonts', font.id, file)), `${font.id}/${file}`);
-    }
   }
 });

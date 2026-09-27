@@ -8,7 +8,12 @@
 - New **IBM 3270 Monochrome** look: a 3278-style terminal where ISPF's colors become normal and
   intensified text, in any phosphor color.
 - Windows Terminal: a color scheme for every preset color of every monochrome look.
-- Tests (`npm test`, `tests/installer.tests.ps1`), run in CI before every build and release.
+- **Two independent parts.** Windows Terminal support is now the **RetroLooks PowerShell module**
+  (`Install-RetroLooks`, `Uninstall-RetroLooks`), installed by the same one-line command. The VS Code
+  extension installs fonts only (**Retro: Install Fonts**). Both share the fonts, and uninstalling one
+  keeps them while the other still uses them.
+- Tests (`npm test`, `tests/powershell/RetroLooks.tests.ps1`), run in CI on Linux and Windows before
+  every build and release.
 
 ## 0.1.1
 

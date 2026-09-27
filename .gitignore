@@ -5,8 +5,8 @@
 dist/
 *.vsix
 node_modules/
-extension/generated/
-extension/README.md
-extension/CHANGELOG.md
-extension/LICENSE
-extension/THIRD-PARTY-NOTICES.md
+vscode/generated/
+vscode/README.md
+vscode/CHANGELOG.md
+vscode/LICENSE
+vscode/THIRD-PARTY-NOTICES.md

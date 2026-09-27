@@ -5,8 +5,8 @@ on:
   workflow_call:
 
 jobs:
-  node-tests:
-    name: Build and tests
+  linux:
+    name: Build and tests (Linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -15,13 +15,13 @@ jobs:
           node-version: 22
       - run: npm test
 
-  installer-tests:
-    name: Windows Terminal installer
+  windows:
+    name: Build and tests (Windows), PowerShell module
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - run: node tools/build.mjs
-      - run: pwsh -NoProfile -File tests/installer.tests.ps1
+      - run: npm test
+      - run: pwsh -NoProfile -File tests/powershell/RetroLooks.tests.ps1

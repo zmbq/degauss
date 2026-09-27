@@ -1,5 +1,5 @@
 // Retro Looks: switches theme + fonts together, restores the previous look on "Retro: Off",
-// and (on Windows) installs the bundled fonts and the Windows Terminal profiles.
+// and (on Windows) installs the bundled fonts. Windows Terminal is the RetroLooks PowerShell module's job.
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
@@ -9,7 +9,8 @@ const { PRESETS, resolveColor, phosphorPalette, fillTemplate } = require('./pale
 const SAVED_KEY = 'retroLooks.saved';
 const ACTIVE_KEY = 'retroLooks.activeLook'; // id of the look applied by the extension, if any
 const REMIND_DISMISSED_KEY = 'retroLooks.installReminderDismissed'; // per machine: fonts are per machine
-const FONT_REG_KEY = 'HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
+// The tests point this at a throwaway key (and LOCALAPPDATA at a temporary folder).
+const FONT_REG_KEY = process.env.RETRO_LOOKS_TEST_FONT_KEY || 'HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
 const FONT_REG_KEY_MACHINE = 'HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
 const isWindows = process.platform === 'win32';
 
@@ -43,13 +44,6 @@ async function windowsDpi() {
 async function displayScale() {
   const zoomLevel = vscode.workspace.getConfiguration('window').get('zoomLevel') ?? 0;
   return ((await windowsDpi()) / 96) * Math.pow(1.2, zoomLevel);
-}
-
-// Windows Terminal sizes fonts in points (screen pixels = points * dpi / 72); pick the sharp size
-// closest to the nominal one, like sizesFor() does for VS Code. Keep in sync with install.ps1.
-function sharpPoints(points, pixelsPerEm, dpi) {
-  const multiple = Math.max(1, Math.round((points * dpi) / 72 / pixelsPerEm));
-  return Math.round(((multiple * pixelsPerEm * 72) / dpi) * 1000) / 1000;
 }
 
 // Pixel fonts are only sharp when each font pixel covers a whole number of screen pixels, so pick the
@@ -280,15 +274,13 @@ async function migrateOldLooks(context, looks) {
   await applyLook(context, apple);
 }
 
-// ---------- Windows install ----------
+// ---------- Windows font install ----------
 
-function windowsPaths() {
-  const local = process.env.LOCALAPPDATA;
-  return {
-    fontDir: path.join(local, 'Microsoft', 'Windows', 'Fonts'),
-    fragmentDir: path.join(local, 'Microsoft', 'Windows Terminal', 'Fragments', 'Retro Looks'),
-  };
-}
+// The same place, file names and registry names as the RetroLooks PowerShell module (both come from the
+// build's fonts.json), so either one can install fonts the other finds.
+const fontDir = () => path.join(process.env.LOCALAPPDATA, 'Microsoft', 'Windows', 'Fonts');
+// Present while Retro Looks for Windows Terminal (the PowerShell module) is installed.
+const terminalFragmentDir = () => path.join(process.env.LOCALAPPDATA, 'Microsoft', 'Windows Terminal', 'Fragments', 'Retro Looks');
 
 async function registryHasValue(key, name) {
   try {
@@ -304,15 +296,6 @@ async function isFontInstalled(font) {
     || (await registryHasValue(FONT_REG_KEY_MACHINE, font.registryName));
 }
 
-async function shellCommandline() {
-  try {
-    await run('where', ['pwsh.exe']);
-    return 'pwsh.exe -NoLogo';
-  } catch {
-    return 'powershell.exe -NoLogo';
-  }
-}
-
 async function install() {
   if (!isWindows) {
     const choice = await vscode.window.showInformationMessage(
@@ -322,33 +305,19 @@ async function install() {
     if (choice) openFonts();
     return;
   }
-  const { fontDir, fragmentDir } = windowsPaths();
-  fs.mkdirSync(fontDir, { recursive: true });
-  const fonts = readJson(generated('fonts.json'));
-  for (const font of fonts) {
+  fs.mkdirSync(fontDir(), { recursive: true });
+  for (const font of readJson(generated('fonts.json'))) {
     const source = generated('fonts', font.id, font.file);
-    const dest = path.join(fontDir, font.installedFile);
+    const dest = path.join(fontDir(), font.installedFile);
     // Installed fonts may be locked by running apps; identical files don't need copying.
     if (!fs.existsSync(dest) || fs.statSync(dest).size !== fs.statSync(source).size) fs.copyFileSync(source, dest);
     await run('reg', ['add', FONT_REG_KEY, '/v', font.registryName, '/t', 'REG_SZ', '/d', dest, '/f']);
   }
 
-  const fragment = readJson(generated('terminal', 'retro-looks.json'));
-  const commandline = await shellCommandline();
-  const dpi = await windowsDpi();
-  for (const profile of fragment.profiles) {
-    profile.commandline = commandline;
-    const grid = fonts.find((f) => f.family === profile.font.face)?.pixelsPerEm;
-    if (grid && pixelPerfect()) profile.font.size = sharpPoints(profile.font.size, grid, dpi);
-  }
-  fs.mkdirSync(fragmentDir, { recursive: true });
-  fs.writeFileSync(path.join(fragmentDir, 'retro-looks.json'), JSON.stringify(fragment, null, 2));
-
   // A running VS Code keeps the font list it loaded at startup; reloading the window doesn't refresh it,
   // and extensions can't relaunch VS Code, so the best we can offer is quitting.
   const choice = await vscode.window.showInformationMessage(
-    'Retro Looks: fonts and Windows Terminal profiles installed. Quit VS Code and start it again to see the '
-      + 'new fonts (reloading the window isn\'t enough). Close all Windows Terminal windows too.',
+    'Retro Looks: fonts installed. Quit VS Code and start it again to see them (reloading the window isn\'t enough).',
     'Quit VS Code', 'Later'
   );
   if (choice === 'Quit VS Code') await vscode.commands.executeCommand('workbench.action.quit');
@@ -360,28 +329,35 @@ async function uninstall(context, looks) {
     return;
   }
   await restore(context, looks, true);
-  const { fontDir, fragmentDir } = windowsPaths();
+  // Someone who just removed the fonts doesn't want to be asked to install them at the next startup.
+  await context.globalState.update(REMIND_DISMISSED_KEY, true);
+
+  if (fs.existsSync(terminalFragmentDir())) {
+    const choice = await vscode.window.showInformationMessage(
+      'Retro Looks for Windows Terminal is installed and uses the same fonts, so they were kept. '
+        + 'Run Uninstall-RetroLooks in PowerShell to remove it, fonts included.',
+      'Remove Fonts Anyway'
+    );
+    if (choice !== 'Remove Fonts Anyway') return;
+  }
+
   const locked = [];
   for (const font of readJson(generated('fonts.json'))) {
-    const file = path.join(fontDir, font.installedFile);
     // Only remove registrations that point at our own file, not a copy the user installed themselves.
     try {
       const out = await run('reg', ['query', FONT_REG_KEY, '/v', font.registryName]);
       if (out.includes(font.installedFile)) await run('reg', ['delete', FONT_REG_KEY, '/v', font.registryName, '/f']);
     } catch { /* not registered */ }
     try {
-      fs.rmSync(file, { force: true });
+      fs.rmSync(path.join(fontDir(), font.installedFile), { force: true });
     } catch {
       locked.push(font.installedFile);
     }
   }
-  fs.rmSync(fragmentDir, { recursive: true, force: true });
-  // Someone who just removed the fonts doesn't want to be asked to install them at the next startup.
-  await context.globalState.update(REMIND_DISMISSED_KEY, true);
   const suffix = locked.length
-    ? ` These font files are in use and couldn't be deleted; they're no longer registered and can be deleted from ${windowsPaths().fontDir} later: ${locked.join(', ')}.`
+    ? ` These font files are in use and couldn't be deleted; they're no longer registered and can be deleted from ${fontDir()} later: ${locked.join(', ')}.`
     : '';
-  vscode.window.showInformationMessage(`Retro Looks: fonts and Windows Terminal profiles removed.${suffix}`);
+  vscode.window.showInformationMessage(`Retro Looks: fonts removed.${suffix}`);
 }
 
 function openFonts() {
@@ -409,7 +385,7 @@ async function remindToInstall(context) {
   if (installed.every(Boolean)) return;
 
   const choice = await vscode.window.showInformationMessage(
-    'Retro Looks: install the retro fonts and Windows Terminal profiles? The looks need them.',
+    'Retro Looks: install the retro fonts? The looks need them.',
     'Install', 'Later', 'Don\'t Show Again'
   );
   if (choice === 'Install') await install();
@@ -443,4 +419,4 @@ function activate(context) {
 }
 
 // `_internal` is for the tests only.
-module.exports = { activate, deactivate() {}, _internal: { computeSizes, sharpPoints } };
+module.exports = { activate, deactivate() {}, _internal: { computeSizes } };

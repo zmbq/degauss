@@ -12,22 +12,29 @@ matching color schemes. People will often ask you to **add a new look** ("add a 
 - `tools/build.mjs`: generates everything else. `tools/templates/<style>-*.json` are the templates
   monochrome looks are generated from (`phosphor`: smooth shades, like the Apple //e; `intensity`: two
   brightness levels, like the IBM 3278); `${slot}` placeholders are filled by `phosphorPalette()`.
-- `extension/palette.js`: the color presets and the palette math, shared by the build and the extension
+- `vscode/palette.js`: the color presets and the palette math, shared by the build and the extension
   (which recolors monochrome looks at runtime with the user's chosen color).
-- `extension/`: the VS Code extension. `extension.js` is hand-written; `package.json`'s `contributes`
-  section and all of `extension/generated/` are produced by the build. Never edit those by hand.
-- `installer/install.ps1`: the Windows Terminal installer. Must keep working on Windows PowerShell 5.1
-  (no `??`, no ternaries, no `&&` in the script).
+- `vscode/`: **project 1**, the VS Code extension. `extension.js` is hand-written; `package.json`'s
+  `version` and `contributes` and all of `vscode/generated/` are produced by the build. Never edit those by hand.
+  It installs fonts only; Windows Terminal is not its job.
+- `powershell/`: **project 2**, the RetroLooks PowerShell module for Windows Terminal
+  (`RetroLooks/RetroLooks.psm1`, `.psd1`) and `install.ps1`, which installs the module and runs it.
+  Both must keep working on Windows PowerShell 5.1 (no `??`, no ternaries, no `&&`; and 5.1's
+  `ConvertFrom-Json` returns a JSON array as one object, so enumerate it explicitly).
+- The two projects share only the fonts: same folder, file names and registry names (from the build's
+  `fonts.json`). Each keeps the fonts on uninstall while the other still uses them. Keep it that way.
+- The product version lives in the root `package.json`; the build copies it to both projects.
 
 ## Commands
 
 - Build: `node tools/build.mjs` (no npm install needed). Run it after every change and fix any error it reports.
-- Test: `npm test` (builds, then runs `tests/*.test.js` with Node's test runner) and, on Windows,
-  `pwsh -File tests/installer.tests.ps1` (runs the Terminal installer against a sandbox). Both run in CI
-  and must pass. Add tests for new behavior; `tests/helpers/fake-vscode.js` drives the extension without VS Code.
+- Test: `npm test` (builds, then runs `tests/**/*.test.js` with Node's test runner) and, on Windows,
+  `pwsh -File tests/powershell/RetroLooks.tests.ps1` (the module and its installer, against a sandbox, in
+  both PowerShells). Both run in CI and must pass. Add tests for new behavior;
+  `tests/vscode/helpers/fake-vscode.js` drives the extension without VS Code.
 - Package the extension: `npm run package` → `dist/vscode-retro-<version>.vsix`.
 - Try it: F5 in VS Code ("Run Retro Looks"), or `code --install-extension dist/vscode-retro-<version>.vsix`.
-- Try the Terminal side: run `dist/terminal/install.ps1`, then restart Windows Terminal.
+- Try the Terminal side: run `dist/powershell/install.ps1`, then restart Windows Terminal.
 
 ## Recipe: a different color for a monochrome look (the most common request)
 
@@ -35,7 +42,7 @@ Usually **no code change is needed**: users pick any color themselves (VS Code: 
 Color…** or the `retroLooks.phosphorColors` setting, e.g. `{ "apple2e": "#40E0FF" }`; Windows Terminal:
 the preset color schemes). Tell them that first.
 
-To add a new **preset** for everyone, add it to `PRESETS` in `extension/palette.js` (a name and a
+To add a new **preset** for everyone, add it to `PRESETS` in `vscode/palette.js` (a name and a
 `#RRGGBB`) and to the preset lists in `README.md`. Every monochrome look then gets it in VS Code and a
 Terminal scheme for it. Softer, less saturated colors are easier on the eyes on large modern screens.
 
@@ -71,10 +78,10 @@ That affects every monochrome look and every color, so check several.
 - Don't add fonts with unclear or non-redistributable licenses, and keep each font's license next to it.
 - Keep the Retro naming: look names are the machine's name plus the variant, e.g. "IBM 3270 Monochrome".
   Monochrome looks aren't named after a color; the color is the user's choice.
-- Keep `FONT_FILE_PREFIX` (build.mjs), `$FontFilePrefix` (install.ps1) and the `(TrueType)` registry
-  name format in sync; the installer and extension use them to find and uninstall fonts.
-- Don't commit generated files (`extension/generated/`, `dist/`, the copied files listed in `.gitignore`).
-- Bump `extension/package.json` `version` and add a `CHANGELOG.md` entry for anything user-visible.
+- Keep `FONT_FILE_PREFIX` (build.mjs) and `$script:FontFilePrefix` (RetroLooks.psm1) in sync; the module
+  uses the prefix to find and uninstall fonts, including ones from older versions.
+- Don't commit generated files (`vscode/generated/`, `dist/`, the copied files listed in `.gitignore`).
+- Bump the root `package.json` `version` and add a `CHANGELOG.md` entry for anything user-visible.
 
 ## If the user just wants a personal tweak
 
