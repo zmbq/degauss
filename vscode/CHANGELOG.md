@@ -1,5 +1,9 @@
 # Changelog: Retro Looks for VS Code
 
+## 0.2.1
+
+- No changes to the extension (released together with the PowerShell module's color-reset fix).
+
 ## 0.2.0
 
 - **Pick your phosphor color.** Apple //e is now one look in the color of your choice: green, amber,
