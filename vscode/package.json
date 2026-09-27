@@ -1,6 +1,6 @@
 {
-  "name": "vscode-retro",
-  "displayName": "Retro Looks",
+  "name": "degauss",
+  "displayName": "Degauss: Retro Computer Looks",
   "description": "Vintage computer looks for VS Code and Windows Terminal: Apple //e green and amber and IBM 3270 ISPF, with period fonts. Windows Terminal also gets IBM PS/2 VGA.",
   "version": "0.3.0",
   "publisher": "zmbq",
@@ -8,12 +8,12 @@
   "icon": "icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zmbq/vscode-retro"
+    "url": "https://github.com/zmbq/degauss"
   },
   "bugs": {
-    "url": "https://github.com/zmbq/vscode-retro/issues"
+    "url": "https://github.com/zmbq/degauss/issues"
   },
-  "homepage": "https://github.com/zmbq/vscode-retro#readme",
+  "homepage": "https://github.com/zmbq/degauss#readme",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -70,65 +70,65 @@
     ],
     "commands": [
       {
-        "command": "retroLooks.choose",
-        "title": "Retro: Choose Look…"
+        "command": "degauss.choose",
+        "title": "Degauss: Choose Look…"
       },
       {
-        "command": "retroLooks.apply.apple2e",
-        "title": "Retro: Apple //e"
+        "command": "degauss.apply.apple2e",
+        "title": "Degauss: Apple //e"
       },
       {
-        "command": "retroLooks.apply.ibm-3270",
-        "title": "Retro: IBM 3270"
+        "command": "degauss.apply.ibm-3270",
+        "title": "Degauss: IBM 3270"
       },
       {
-        "command": "retroLooks.apply.ibm-3270-mono",
-        "title": "Retro: IBM 3270 Monochrome"
+        "command": "degauss.apply.ibm-3270-mono",
+        "title": "Degauss: IBM 3270 Monochrome"
       },
       {
-        "command": "retroLooks.setColor",
-        "title": "Retro: Set Phosphor Color…"
+        "command": "degauss.setColor",
+        "title": "Degauss: Set Phosphor Color…"
       },
       {
-        "command": "retroLooks.off",
-        "title": "Retro: Off (restore previous look)"
+        "command": "degauss.off",
+        "title": "Degauss: Off (restore previous look)"
       },
       {
-        "command": "retroLooks.degauss",
-        "title": "Retro: Degauss"
+        "command": "degauss.degauss",
+        "title": "Degauss: Degauss!"
       },
       {
-        "command": "retroLooks.install",
-        "title": "Retro: Install Fonts"
+        "command": "degauss.install",
+        "title": "Degauss: Install Fonts"
       },
       {
-        "command": "retroLooks.openFonts",
-        "title": "Retro: Open Bundled Fonts Folder"
+        "command": "degauss.openFonts",
+        "title": "Degauss: Open Bundled Fonts Folder"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "retroLooks.install",
-          "when": "!retroLooks.fontsInstalled"
+          "command": "degauss.install",
+          "when": "!degauss.fontsInstalled"
         }
       ]
     },
     "configuration": {
-      "title": "Retro Looks",
+      "title": "Degauss",
       "properties": {
-        "retroLooks.pixelPerfectFontSize": {
+        "degauss.pixelPerfectFontSize": {
           "type": "boolean",
           "default": true,
           "markdownDescription": "Adjust the font size of pixel fonts to your display scaling so every font pixel covers a whole number of screen pixels. This keeps them sharp; turn it off to use each look's nominal size."
         },
-        "retroLooks.phosphorColors": {
+        "degauss.phosphorColors": {
           "type": "object",
           "default": {},
           "additionalProperties": {
             "type": "string"
           },
-          "markdownDescription": "The phosphor color of each monochrome look in VS Code, by look ID (`apple2e`, `ibm-3270-mono`): a preset (`green`, `amber`, `white`, `cyan`, `yellow`) or `#RRGGBB`. Easiest to set with **Retro: Set Phosphor Color…**. Windows Terminal is not affected."
+          "markdownDescription": "The phosphor color of each monochrome look in VS Code, by look ID (`apple2e`, `ibm-3270-mono`): a preset (`green`, `amber`, `white`, `cyan`, `yellow`) or `#RRGGBB`. Easiest to set with **Degauss: Set Phosphor Color…**. Windows Terminal is not affected."
         }
       }
     }

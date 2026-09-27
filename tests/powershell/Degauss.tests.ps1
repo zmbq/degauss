@@ -1,13 +1,13 @@
-# Tests the RetroLooks PowerShell module and its installer from the build output (dist/powershell), in
+# Tests the Degauss PowerShell module and its installer from the build output (dist/powershell), in
 # Windows PowerShell 5.1 and PowerShell 7. Everything is redirected to a temporary folder and a throwaway
 # registry key, wt.exe is replaced by a fake, and color sequences are captured instead of written, so it's
 # safe to run on a developer machine. Build first (`npm test` or `node tools/build.mjs`).
-#   pwsh -File tests/powershell/RetroLooks.tests.ps1
+#   pwsh -File tests/powershell/Degauss.tests.ps1
 param([switch]$Inner)   # set when the script re-runs itself inside each PowerShell
 $ErrorActionPreference = 'Stop'
 $root = Split-Path (Split-Path $PSScriptRoot)
 $package = Join-Path $root 'dist\powershell'
-if (-not (Test-Path (Join-Path $package 'RetroLooks\RetroLooks.psd1'))) { throw "Build first: $package is missing." }
+if (-not (Test-Path (Join-Path $package 'Degauss\Degauss.psd1'))) { throw "Build first: $package is missing." }
 
 if (-not $Inner) {
     $failed = @()
@@ -16,8 +16,8 @@ if (-not $Inner) {
         & $shell -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath -Inner
         if ($LASTEXITCODE -ne 0) { $failed += $shell }
     }
-    if ($failed) { throw "RetroLooks tests failed in: $($failed -join ', ')" }
-    Write-Host 'All RetroLooks tests passed.'
+    if ($failed) { throw "Degauss tests failed in: $($failed -join ', ')" }
+    Write-Host 'All Degauss tests passed.'
     return
 }
 
@@ -30,23 +30,23 @@ function Throws([scriptblock]$Block, [string]$Pattern, [string]$Message) {
     try { & $Block; Check $false "$Message (no error)" } catch { Check ($_.Exception.Message -match $Pattern) "$Message ($($_.Exception.Message))" }
 }
 
-$sandbox = Join-Path ([IO.Path]::GetTempPath()) ('retro-looks-test-' + [guid]::NewGuid())
-$testKey = "HKCU:\SOFTWARE\RetroLooksTest-$([guid]::NewGuid())"
+$sandbox = Join-Path ([IO.Path]::GetTempPath()) ('degauss-test-' + [guid]::NewGuid())
+$testKey = "HKCU:\SOFTWARE\DegaussTest-$([guid]::NewGuid())"
 $paths = @{
     Fonts    = Join-Path $sandbox 'fonts'
     FontKey  = "$testKey\Fonts"
-    Fragment = Join-Path $sandbox 'Fragments\Retro Looks'
-    Data     = Join-Path $sandbox 'RetroLooks'
+    Fragment = Join-Path $sandbox 'Fragments\Degauss'
+    Data     = Join-Path $sandbox 'Degauss'
 }
-$fragmentFile = Join-Path $paths.Fragment 'retro-looks.json'
+$fragmentFile = Join-Path $paths.Fragment 'degauss.json'
 $prefsFile = Join-Path $paths.Data 'terminal.json'
 New-Item -ItemType Directory -Force $sandbox | Out-Null
-$savedEnv = @{ WT_SESSION = $env:WT_SESSION; WT_PROFILE_ID = $env:WT_PROFILE_ID; TERM_PROGRAM = $env:TERM_PROGRAM; RETRO_LOOK = $env:RETRO_LOOK }
-$env:RETRO_LOOK = $null
+$savedEnv = @{ WT_SESSION = $env:WT_SESSION; WT_PROFILE_ID = $env:WT_PROFILE_ID; TERM_PROGRAM = $env:TERM_PROGRAM; DEGAUSS_LOOK = $env:DEGAUSS_LOOK }
+$env:DEGAUSS_LOOK = $null
 
 try {
-    Import-Module (Join-Path $package 'RetroLooks\RetroLooks.psd1') -Force
-    $module = Get-Module RetroLooks
+    Import-Module (Join-Path $package 'Degauss\Degauss.psd1') -Force
+    $module = Get-Module Degauss
     & $module {
         param($p)
         $script:FontDir = $p.Fonts; $script:FontKey = $p.FontKey; $script:FragmentDir = $p.Fragment
@@ -67,7 +67,7 @@ try {
         $script:DegaussFrameMs = 0
     } $paths
     $inModule = { param($block, $arg1, $arg2) & $module $block $arg1 $arg2 }
-    $fonts = & $module { Get-RetroFont }
+    $fonts = & $module { Get-DegaussFont }
     $looks = @(& $module { Get-LookData })
     $lookById = @{}; foreach ($l in $looks) { $lookById[$l.id] = $l }
     $registered = { $k = Get-ItemProperty $paths.FontKey -ErrorAction SilentlyContinue; @($fonts | Where-Object { $k -and $k.($_.registryName) }) }
@@ -77,12 +77,12 @@ try {
     $clearWritten = { & $module { $script:Written = @() } }
     $wtCalls = { & $module { $script:WtCalls } }
     $clearWt = { & $module { $script:WtCalls = @() } }
-    $retroGuid = & $module { $script:RetroProfileGuid }
+    $degaussGuid = & $module { $script:DegaussProfileGuid }
     $originalPrompt = (Get-Command prompt).ScriptBlock.ToString()
     $profileScheme = { param($id) ((Get-Content $fragmentFile -Raw | ConvertFrom-Json).profiles | Where-Object guid -eq $lookById[$id].guid).colorScheme }
     $fragmentScheme = { param($name) (Get-Content $fragmentFile -Raw | ConvertFrom-Json).schemes | Where-Object name -eq $name }
-    $lookProfiles = { param($f) @($f.profiles | Where-Object { $_.guid -ne $retroGuid }) }
-    $retroProfile = { param($f) $f.profiles | Where-Object { $_.guid -eq $retroGuid } }
+    $lookProfiles = { param($f) @($f.profiles | Where-Object { $_.guid -ne $degaussGuid }) }
+    $degaussProfile = { param($f) $f.profiles | Where-Object { $_.guid -eq $degaussGuid } }
 
     Write-Host '-- first use'
     $answer = { param($yes) & $module { param($a) $script:Answers.Enqueue($a) } $yes }
@@ -103,7 +103,7 @@ try {
     $asked = @(& $questions).Count
     look apple -KeepTab
     Check (@(& $wtCalls).Count -eq 1 -and @(& $questions).Count -eq $asked) 'once set up, look just works'
-    & $module { $p = Get-RetroPreference; $p.installedVersion = '0.0.1'; Save-RetroPreference $p }
+    & $module { $p = Get-DegaussPreference; $p.installedVersion = '0.0.1'; Save-DegaussPreference $p }
     & $answer $true
     & $clearWt
     $message = look apple -KeepTab 6>&1 | Out-String -Width 4096
@@ -113,26 +113,26 @@ try {
     look -Off -KeepTab
     Check (@(& $wtCalls).Count -eq 1) 'look -Off never needs setup'
     Pop-Location
-    Uninstall-RetroLooks 6>$null | Out-Null
+    Uninstall-Degauss 6>$null | Out-Null
     $env:WT_SESSION = $null
 
-    Write-Host '-- Install-RetroLooks'
-    Install-RetroLooks 6>$null | Out-Null
+    Write-Host '-- Install-Degauss'
+    Install-Degauss 6>$null | Out-Null
     foreach ($font in $fonts) {
         $value = (Get-ItemProperty $paths.FontKey).($font.registryName)
         Check ($value -eq (Join-Path $paths.Fonts $font.installedFile) -and (Test-Path $value)) "font registered and copied: $($font.family)"
     }
     Check (Test-Path $fragmentFile) 'Terminal fragment written'
-    Check ((Test-Path $ownMarker) -and ((Get-Content $ownMarker -Raw) -match 'RetroLooks module \d')) 'font-user marker written'
+    Check ((Test-Path $ownMarker) -and ((Get-Content $ownMarker -Raw) -match 'Degauss module \d')) 'font-user marker written'
     $fragment = Get-Content $fragmentFile -Raw | ConvertFrom-Json
     $schemes = @($fragment.schemes | ForEach-Object { $_.name })
     $dpi = & $module { Get-DisplayDpi }
-    $retro = & $retroProfile $fragment
-    Check ($retro -and $retro.name -eq 'Retro Looks' -and $retro.hidden -eq $false) 'one visible Retro Looks profile'
-    Check ($retro.commandline -match 'Initialize-RetroTab -Look apple2e$' -and $retro.font.face -eq 'PR Number 3') 'it opens the default look (Apple //e)'
+    $visible = & $degaussProfile $fragment
+    Check ($visible -and $visible.name -eq 'Degauss' -and $visible.hidden -eq $false) 'one visible Degauss profile'
+    Check ($visible.commandline -match 'Initialize-DegaussTab -Look apple2e$' -and $visible.font.face -eq 'PR Number 3') 'it opens the default look (Apple //e)'
     Check ((& $lookProfiles $fragment).Count -eq $looks.Count) 'plus a profile per look'
     foreach ($terminalProfile in & $lookProfiles $fragment) {
-        Check ($terminalProfile.commandline -match '^(pwsh|powershell)\.exe -NoLogo -NoExit -Command Initialize-RetroTab$') "$($terminalProfile.name): runs Initialize-RetroTab"
+        Check ($terminalProfile.commandline -match '^(pwsh|powershell)\.exe -NoLogo -NoExit -Command Initialize-DegaussTab$') "$($terminalProfile.name): runs Initialize-DegaussTab"
         Check ($terminalProfile.hidden -eq $true) "$($terminalProfile.name): hidden"
         Check ($schemes -contains $terminalProfile.colorScheme) "$($terminalProfile.name): color scheme '$($terminalProfile.colorScheme)' exists"
         $grid = ($fonts | Where-Object family -eq $terminalProfile.font.face).pixelsPerEm
@@ -141,10 +141,10 @@ try {
             Check ([math]::Abs($pixelsPerDot - [math]::Round($pixelsPerDot)) -lt 0.001) "$($terminalProfile.name): $($terminalProfile.font.size)pt is sharp at $dpi DPI"
         }
     }
-    Install-RetroLooks -ShowProfiles -KeepFontSizes 6>$null | Out-Null
+    Install-Degauss -ShowProfiles -KeepFontSizes 6>$null | Out-Null
     $fragment = Get-Content $fragmentFile -Raw | ConvertFrom-Json
     Check (@($fragment.profiles | Where-Object hidden).Count -eq 0) '-ShowProfiles shows the profiles'
-    $source = Get-Content (Join-Path $package 'RetroLooks\retro-looks.json') -Raw | ConvertFrom-Json
+    $source = Get-Content (Join-Path $package 'Degauss\degauss.json') -Raw | ConvertFrom-Json
     Check ((@(& $lookProfiles $fragment | ForEach-Object { $_.font.size }) -join ',') -eq (@($source.profiles | ForEach-Object { $_.font.size }) -join ',')) '-KeepFontSizes keeps nominal sizes'
 
     Write-Host '-- colors match the VS Code extension (vscode/palette.js)'
@@ -153,7 +153,7 @@ try {
         foreach ($preset in (& $module { Get-PaletteData }).presets.PSObject.Properties) {
             $name = "$($look.name) " + $preset.Name.Substring(0, 1).ToUpper() + $preset.Name.Substring(1)
             $expected = $source.schemes | Where-Object name -eq $name
-            $actual = & $inModule { param($s, $c) Get-RetroScheme $s $c } $look.colorStyle $preset.Value
+            $actual = & $inModule { param($s, $c) Get-DegaussScheme $s $c } $look.colorStyle $preset.Value
             foreach ($key in $actual.Keys) { $count++; if ($actual[$key] -ne $expected.$key) { $diffs++ } }
         }
     }
@@ -162,7 +162,7 @@ try {
         $palette = (Join-Path $root 'vscode\palette.js').Replace('\', '/')
         foreach ($custom in '#40E0FF', '#102030', '#FF00FF') {
             $js = node -e "const p=require('$palette'); console.log(JSON.stringify(p.phosphorPalette(p.resolveColor('$custom'))))" | ConvertFrom-Json
-            $ps = & $inModule { param($c) Get-PhosphorPalette (Resolve-RetroColor $c) } $custom
+            $ps = & $inModule { param($c) Get-PhosphorPalette (Resolve-DegaussColor $c) } $custom
             $bad = @($ps.Keys | Where-Object { $ps[$_] -ne $js.$_ })
             Check ($bad.Count -eq 0) "custom $custom palette identical to palette.js$(if ($bad) { ': ' + ($bad -join ', ') })"
         }
@@ -172,9 +172,9 @@ try {
     $spec = { param($s) & $module { param($x) ConvertFrom-ColorSpec $x } $s }
     Check ((& $spec 'AMBER').Stored -eq 'amber') 'preset names in any case'
     Check ((& $spec '40e0ff').Stored -eq '#40E0FF') 'RGB with or without #'
-    Check ((& $spec '#102030').Phosphor -eq (& $inModule { param($c) Resolve-RetroColor $c } '#102030')) 'dark colors brightened'
+    Check ((& $spec '#102030').Phosphor -eq (& $inModule { param($c) Resolve-DegaussColor $c } '#102030')) 'dark colors brightened'
     $dosGreen = & $spec '0A'
-    Check ($dosGreen.Phosphor -eq (& $inModule { param($c) Resolve-RetroColor $c } 'green') -and $dosGreen.Stored -eq '0A') 'DOS 0A is the green phosphor'
+    Check ($dosGreen.Phosphor -eq (& $inModule { param($c) Resolve-DegaussColor $c } 'green') -and $dosGreen.Stored -eq '0A') 'DOS 0A is the green phosphor'
     Check ((& $spec 'e').Stored -eq '0E') 'one DOS digit means a black background'
     $dosBlue = & $spec '1f'
     Check ($dosBlue.Foreground -eq '#FFFFFF' -and $dosBlue.Background -eq '#0000AA' -and -not $dosBlue.Phosphor) 'DOS 1F is white on blue'
@@ -182,18 +182,18 @@ try {
     Throws { & $spec 'purple' } 'Unknown color' 'unknown names are rejected'
     Throws { & $spec '#000000' } 'black' 'black is rejected'
 
-    Write-Host '-- Set-RetroColor'
+    Write-Host '-- Set-DegaussColor'
     $env:WT_SESSION = 'test'; $env:TERM_PROGRAM = $null
     $env:WT_PROFILE_ID = $lookById['apple2e'].guid
     & $clearWritten
     color amber
-    $amber = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'phosphor' (Resolve-RetroColor $c)) } 'amber'
+    $amber = & $inModule { param($c) Get-ColorSequence (Get-DegaussScheme 'phosphor' (Resolve-DegaussColor $c)) } 'amber'
     Check ((& $written) -eq $amber) 'color amber recolors an Apple //e tab with the amber phosphor palette'
     Check (([regex]::Matches((& $written), "\]4;\d+;rgb:")).Count -eq 16) 'all 16 ANSI colors are set'
     $env:WT_PROFILE_ID = $lookById['ibm-3270'].guid
     & $clearWritten
     color amber
-    $intensity = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'intensity' (Resolve-RetroColor $c)) } 'amber'
+    $intensity = & $inModule { param($c) Get-ColorSequence (Get-DegaussScheme 'intensity' (Resolve-DegaussColor $c)) } 'amber'
     Check ((& $written) -eq $intensity) 'in a 3270 tab, amber keeps the two brightness levels'
     & $clearWritten
     color 1F
@@ -208,26 +208,26 @@ try {
     $message = color cyan -SetAsDefault 6>&1 | Out-String -Width 4096
     Check ((Get-Content $prefsFile -Raw | ConvertFrom-Json).colors.apple2e -eq 'cyan') '-SetAsDefault saves the color for the look'
     Check ((& $profileScheme 'apple2e') -eq 'Apple //e Cyan') "... and the look's Terminal profile uses it, so Terminal's color resets land on it"
-    Check ((& $retroProfile (Get-Content $fragmentFile -Raw | ConvertFrom-Json)).colorScheme -eq 'Apple //e Cyan') '... and so does the Retro Looks profile'
+    Check ((& $degaussProfile (Get-Content $fragmentFile -Raw | ConvertFrom-Json)).colorScheme -eq 'Apple //e Cyan') '... and so does the Degauss profile'
     Check ($message -match 'Restart Windows Terminal') '... after a Terminal restart, which it mentions'
     & $clearWritten
-    Initialize-RetroTab
-    $cyan = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'phosphor' (Resolve-RetroColor $c)) } 'cyan'
+    Initialize-DegaussTab
+    $cyan = & $inModule { param($c) Get-ColorSequence (Get-DegaussScheme 'phosphor' (Resolve-DegaussColor $c)) } 'cyan'
     Check ((& $written) -eq $cyan) 'a new tab of the look opens in the saved color'
     & $clearWritten
     color
     Check ((& $written) -eq ((& $module { $script:ResetSequence }) + $cyan)) 'color alone goes back to the saved default'
     color '#40E0FF' -SetAsDefault 6>$null
     $customScheme = & $fragmentScheme 'Apple //e Custom'
-    $expected = & $inModule { param($c) Get-RetroScheme 'phosphor' (Resolve-RetroColor $c) } '#40E0FF'
+    $expected = & $inModule { param($c) Get-DegaussScheme 'phosphor' (Resolve-DegaussColor $c) } '#40E0FF'
     Check ((& $profileScheme 'apple2e') -eq 'Apple //e Custom' -and $customScheme.background -eq $expected.background -and $customScheme.brightWhite -eq $expected.brightWhite) 'a custom default gets its own Terminal scheme'
-    $env:RETRO_LOOK = 'ibm-3270'
+    $env:DEGAUSS_LOOK = 'ibm-3270'
     color 1F -SetAsDefault 6>$null
     $dosScheme = & $fragmentScheme 'IBM 3270 Custom'
     Check ((& $profileScheme 'ibm-3270') -eq 'IBM 3270 Custom' -and $dosScheme.background -eq '#0000AA' -and $dosScheme.foreground -eq '#FFFFFF' -and $dosScheme.red -eq '#FF3030') 'a DOS default keeps the look''s colors with DOS''s text and background'
     color -SetAsDefault 6>$null
     Check ((& $profileScheme 'ibm-3270') -eq 'IBM 3270') '... and forgetting it restores the look''s own scheme'
-    $env:RETRO_LOOK = 'apple2e'
+    $env:DEGAUSS_LOOK = 'apple2e'
     color -SetAsDefault 6>$null
     Check (-not (Get-Content $prefsFile -Raw | ConvertFrom-Json).colors.apple2e) 'color -SetAsDefault alone forgets the saved color'
     Check ((& $profileScheme 'apple2e') -eq 'Apple //e Green') '... and the profile goes back to the built-in scheme'
@@ -246,14 +246,14 @@ try {
     & $clearWritten
     prompt | Out-Null
     Check (-not (& $written)) 'after color alone (no default), nothing is re-sent'
-    Check ($env:RETRO_LOOK -eq 'apple2e') 'the tab remembers its look'
-    $env:WT_PROFILE_ID = $null; $env:RETRO_LOOK = $null
-    Throws { color amber -SetAsDefault } 'Retro Looks tab' '-SetAsDefault outside a Retro Looks tab is refused'
+    Check ($env:DEGAUSS_LOOK -eq 'apple2e') 'the tab remembers its look'
+    $env:WT_PROFILE_ID = $null; $env:DEGAUSS_LOOK = $null
+    Throws { color amber -SetAsDefault } 'Degauss tab' '-SetAsDefault outside a Degauss tab is refused'
     & $clearWritten
     color amber
-    Check ((& $written) -eq $amber) 'outside Retro Looks tabs, color still works as a phosphor monitor'
+    Check ((& $written) -eq $amber) 'outside Degauss tabs, color still works as a phosphor monitor'
 
-    Write-Host '-- Invoke-RetroDegauss'
+    Write-Host '-- Invoke-Degauss'
     $reset = & $module { $script:ResetSequence }
     $frames = & $module { $script:DegaussFrames }
     & $clearWritten
@@ -279,14 +279,14 @@ try {
     $first = & $inModule { param($c) Get-DegaussSequence $c 0 } (& $module { Get-TabColors })
     Check ($scheme -and $first -eq (& $inModule { param($s) Get-ColorSequence $s } $scheme).Replace(
         "]11;$(& $inModule { param($c) Format-OscColor $c } $scheme.background)", "]11;$(& $inModule { param($c) Format-OscColor (Get-MixedColor $c '#FF0000' 0.3) } $scheme.background)")) '... and swirls from the look''s own colors'
-    $env:WT_PROFILE_ID = $null; $env:RETRO_LOOK = $null
+    $env:WT_PROFILE_ID = $null; $env:DEGAUSS_LOOK = $null
     & $clearWritten
     degauss -Quiet
     $out = & $written
     Check ($out -notmatch '\]4;' -and $out.EndsWith($reset)) 'in other tabs, degauss changes only the text and background, then resets them'
     color amber
 
-    Write-Host '-- Set-RetroLook'
+    Write-Host '-- Set-DegaussLook'
     Push-Location $sandbox
     & $clearWt
     look apple -KeepTab
@@ -299,38 +299,38 @@ try {
     Check ((Get-Content $pendingFile -Raw) -match '^ibm-3270-mono\|amber\|\d+$') '-Color is handed to the new tab'
     $env:WT_PROFILE_ID = $lookById['ibm-3270-mono'].guid
     & $clearWritten
-    Initialize-RetroTab
-    $monoAmber = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'intensity' (Resolve-RetroColor $c)) } 'amber'
+    Initialize-DegaussTab
+    $monoAmber = & $inModule { param($c) Get-ColorSequence (Get-DegaussScheme 'intensity' (Resolve-DegaussColor $c)) } 'amber'
     Check ((& $written) -eq $monoAmber -and -not (Test-Path $pendingFile)) 'the new tab applies it and clears the hand-over'
-    $env:WT_PROFILE_ID = $null; $env:RETRO_LOOK = $null
+    $env:WT_PROFILE_ID = $null; $env:DEGAUSS_LOOK = $null
     & $clearWt
     look -Off -KeepTab
     Check ((@(& $wtCalls)[0] -join ' ') -eq "-w 0 nt -d $sandbox") 'look -Off opens a normal tab'
     & $clearWt
     $message = look ps2 -SetAsDefault -KeepTab 6>&1 | Out-String -Width 4096
     Check ((@(& $wtCalls)[0] -join ' ') -match [regex]::Escape($lookById['ibm-ps2-vga'].guid)) 'look -SetAsDefault also switches to the look'
-    Check ($message -match 'Default look: IBM PS/2 VGA' -and $message -match 'restart Windows Terminal') 'and says the Retro Looks profile needs a Terminal restart'
+    Check ($message -match 'Default look: IBM PS/2 VGA' -and $message -match 'restart Windows Terminal') 'and says the Degauss profile needs a Terminal restart'
     $fragment = Get-Content $fragmentFile -Raw | ConvertFrom-Json
-    $retro = & $retroProfile $fragment
-    Check ($retro.commandline -match '-Look ibm-ps2-vga$' -and $retro.font.face -eq 'PxPlus IBM VGA 9x16' -and $retro.guid -eq $retroGuid) 'the Retro Looks profile now copies the new default, same GUID'
-    Check (@($fragment.profiles | Where-Object hidden).Count -eq 0) 'Install-RetroLooks -ShowProfiles is remembered when the fragment is rewritten'
+    $visible = & $degaussProfile $fragment
+    Check ($visible.commandline -match '-Look ibm-ps2-vga$' -and $visible.font.face -eq 'PxPlus IBM VGA 9x16' -and $visible.guid -eq $degaussGuid) 'the Degauss profile now copies the new default, same GUID'
+    Check (@($fragment.profiles | Where-Object hidden).Count -eq 0) 'Install-Degauss -ShowProfiles is remembered when the fragment is rewritten'
     $message = look ps2 -Color amber -SetAsDefault -KeepTab 6>&1 | Out-String -Width 4096
     Check ($message -match 'Default look: IBM PS/2 VGA \(amber\)' -and $message -notmatch 'restart') 'a new default color needs no restart'
     look -KeepTab
     Check ((@(& $wtCalls)[2] -join ' ') -match [regex]::Escape($lookById['ibm-ps2-vga'].guid)) 'look alone opens the default look'
 
-    Write-Host '-- the Retro Looks profile'
+    Write-Host '-- the Degauss profile'
     & $clearWritten
-    $message = Initialize-RetroTab -Look apple2e 6>&1 | Out-String -Width 4096
-    Check ($message -match 'default look is now IBM PS/2 VGA' -and $message -match 'Apple //e') 'a tab from an outdated Retro Looks profile says a Terminal restart is pending'
-    Check ($env:RETRO_LOOK -eq 'apple2e') '... and still knows it shows Apple //e'
-    $message = Initialize-RetroTab -Look ibm-ps2-vga 6>&1 | Out-String -Width 4096
-    Check (-not $message.Trim()) 'an up-to-date Retro Looks tab says nothing'
-    $vgaAmber = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'luminance' (Resolve-RetroColor $c)) } 'amber'
+    $message = Initialize-DegaussTab -Look apple2e 6>&1 | Out-String -Width 4096
+    Check ($message -match 'default look is now IBM PS/2 VGA' -and $message -match 'Apple //e') 'a tab from an outdated Degauss profile says a Terminal restart is pending'
+    Check ($env:DEGAUSS_LOOK -eq 'apple2e') '... and still knows it shows Apple //e'
+    $message = Initialize-DegaussTab -Look ibm-ps2-vga 6>&1 | Out-String -Width 4096
+    Check (-not $message.Trim()) 'an up-to-date Degauss tab says nothing'
+    $vgaAmber = & $inModule { param($c) Get-ColorSequence (Get-DegaussScheme 'luminance' (Resolve-DegaussColor $c)) } 'amber'
     Check ((& $written) -like "*$vgaAmber") '... and opens in the default color'
-    $env:RETRO_LOOK = $null
-    Check (@(Get-RetroLook | Where-Object Default).Name -eq 'IBM PS/2 VGA') 'Get-RetroLook shows the default'
-    Check (@(Get-RetroLook).Count -eq $looks.Count) 'Get-RetroLook lists every look'
+    $env:DEGAUSS_LOOK = $null
+    Check (@(Get-DegaussLook | Where-Object Default).Name -eq 'IBM PS/2 VGA') 'Get-DegaussLook shows the default'
+    Check (@(Get-DegaussLook).Count -eq $looks.Count) 'Get-DegaussLook lists every look'
     Throws { look nosuchlook -KeepTab } 'apple.*3270' 'unknown looks list the valid names'
     $env:TERM_PROGRAM = 'vscode'
     & $clearWt
@@ -352,43 +352,43 @@ try {
 
     Write-Host '-- without Windows Terminal'
     & $module { $script:IsTerminalInstalled = { $false } }
-    $warnings = Install-RetroLooks 6>$null 3>&1 | Out-String -Width 4096
-    Check ($warnings -match 'Windows Terminal is not installed' -and (& $registered).Count -eq $fonts.Count) 'Install-RetroLooks warns, and installs the fonts anyway'
+    $warnings = Install-Degauss 6>$null 3>&1 | Out-String -Width 4096
+    Check ($warnings -match 'Windows Terminal is not installed' -and (& $registered).Count -eq $fonts.Count) 'Install-Degauss warns, and installs the fonts anyway'
     & $module { $script:IsTerminalInstalled = { $true } }
 
     Write-Host '-- fonts shared with the VS Code extension'
-    'Retro Looks for VS Code' | Set-Content $vscodeMarker
-    $message = Uninstall-RetroLooks 6>&1 | Out-String -Width 4096
+    'Degauss for VS Code' | Set-Content $vscodeMarker
+    $message = Uninstall-Degauss 6>&1 | Out-String -Width 4096
     Check (-not (Test-Path $paths.Fragment)) 'Terminal fragment removed'
     Check (-not (Test-Path $prefsFile)) 'preferences removed'
     Check (-not (Test-Path $ownMarker)) 'own marker removed'
     Check ((& $registered).Count -eq $fonts.Count) 'fonts kept while the VS Code extension uses them'
     Check ($message -match 'VS Code extension still uses them') 'user is told why'
     Check (Test-Path $vscodeMarker) "the extension's marker is left alone"
-    Install-RetroLooks 6>$null | Out-Null
-    Uninstall-RetroLooks -RemoveFonts 6>$null | Out-Null
+    Install-Degauss 6>$null | Out-Null
+    Uninstall-Degauss -RemoveFonts 6>$null | Out-Null
     Check ((& $registered).Count -eq 0) '-RemoveFonts removes them anyway'
     Remove-Item $vscodeMarker
-    Install-RetroLooks 6>$null | Out-Null
+    Install-Degauss 6>$null | Out-Null
     $env:WT_SESSION = 'test'
     Push-Location $sandbox
     look apple -Color amber -SetAsDefault -KeepTab 6>$null
     Pop-Location
-    Uninstall-RetroLooks 6>$null | Out-Null
+    Uninstall-Degauss 6>$null | Out-Null
     Check ((& $registered).Count -eq 0) 'fonts removed when nothing else uses them'
     Check (@(Get-ChildItem $paths.Fonts -ErrorAction SilentlyContinue).Count -eq 0) 'font files deleted'
-    Check (-not (Test-Path $paths.Data)) 'no RetroLooks folder left behind'
+    Check (-not (Test-Path $paths.Data)) 'no Degauss folder left behind'
     Check ((Get-Command prompt).ScriptBlock.ToString() -eq $originalPrompt) "the user's prompt function is back as it was"
 
-    Write-Host '-- cleans up a v0.1 installation'
+    Write-Host '-- cleans up leftovers of older versions'
     New-Item -ItemType Directory -Force $paths.Fragment, $paths.Fonts | Out-Null
     '{}' | Set-Content $fragmentFile
-    foreach ($name in 'RetroLooks-PRNumber3.ttf', 'RetroLooks-OldFont.ttf') {
+    foreach ($name in 'Degauss-PRNumber3.ttf', 'Degauss-OldFont.ttf') {
         $file = Join-Path $paths.Fonts $name
         'x' | Set-Content $file
         Set-ItemProperty -Path $paths.FontKey -Name "$name (TrueType)" -Value $file
     }
-    Uninstall-RetroLooks 6>$null | Out-Null
+    Uninstall-Degauss 6>$null | Out-Null
     Check (-not (Test-Path $paths.Fragment)) 'old fragment removed'
     $left = @((Get-ItemProperty $paths.FontKey).PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' })
     Check ($left.Count -eq 0) 'old fonts unregistered, including ones no longer shipped'
@@ -409,19 +409,19 @@ try {
     Write-Host '-- install.ps1 (module copy only)'
     $modules = Join-Path $sandbox 'modules'
     & (Join-Path $package 'install.ps1') -ModulesRoot $modules -NoRun 6>$null | Out-Null
-    $version = (Import-PowerShellDataFile (Join-Path $package 'RetroLooks\RetroLooks.psd1')).ModuleVersion
-    Check (Test-Path (Join-Path $modules "RetroLooks\$version\RetroLooks.psd1")) "module installed as RetroLooks\$version"
-    Check (Test-Path (Join-Path $modules "RetroLooks\$version\looks.json")) 'module data copied'
+    $version = (Import-PowerShellDataFile (Join-Path $package 'Degauss\Degauss.psd1')).ModuleVersion
+    Check (Test-Path (Join-Path $modules "Degauss\$version\Degauss.psd1")) "module installed as Degauss\$version"
+    Check (Test-Path (Join-Path $modules "Degauss\$version\looks.json")) 'module data copied'
     & (Join-Path $package 'install.ps1') -ModulesRoot $modules -NoRun 6>$null | Out-Null
-    Check (@(Get-ChildItem (Join-Path $modules 'RetroLooks')).Count -eq 1) 'reinstalling replaces the old copy'
+    Check (@(Get-ChildItem (Join-Path $modules 'Degauss')).Count -eq 1) 'reinstalling replaces the old copy'
     & (Join-Path $package 'install.ps1') -ModulesRoot $modules -NoRun -Uninstall 6>$null | Out-Null
-    Check (-not (Test-Path (Join-Path $modules 'RetroLooks'))) 'uninstall removes the module'
+    Check (-not (Test-Path (Join-Path $modules 'Degauss'))) 'uninstall removes the module'
 } catch {
     Write-Host "  FAIL $($_.Exception.Message) ($($_.InvocationInfo.PositionMessage))" -ForegroundColor Red
     $script:failures++
 } finally {
     foreach ($name in $savedEnv.Keys) { Set-Item "env:$name" $savedEnv[$name] -ErrorAction SilentlyContinue }
-    Remove-Module RetroLooks -ErrorAction SilentlyContinue
+    Remove-Module Degauss -ErrorAction SilentlyContinue
     Remove-Item $testKey -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue
 }

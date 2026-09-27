@@ -1,8 +1,8 @@
-// Installs and removes the Retro Looks fonts on Windows (current user only). Plain Node, no VS Code API,
+// Installs and removes the Degauss fonts on Windows (current user only). Plain Node, no VS Code API,
 // so the extension's uninstall hook (uninstall.js) can use it too.
 //
-// The RetroLooks PowerShell module installs the same fonts, in the same place, under the same names.
-// Each project that uses the fonts leaves a marker file in %LOCALAPPDATA%\RetroLooks\font-users; the
+// The Degauss PowerShell module installs the same fonts, in the same place, under the same names.
+// Each project that uses the fonts leaves a marker file in %LOCALAPPDATA%\Degauss\font-users; the
 // fonts are only removed once no marker is left, so uninstalling one project never breaks the other.
 const fs = require('fs');
 const path = require('path');
@@ -10,10 +10,10 @@ const { execFile } = require('child_process');
 
 const MARKER = 'vscode';
 // The tests point this at a throwaway key (and LOCALAPPDATA at a temporary folder).
-const fontKey = () => process.env.RETRO_LOOKS_TEST_FONT_KEY || 'HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
+const fontKey = () => process.env.DEGAUSS_TEST_FONT_KEY || 'HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
 const FONT_KEY_MACHINE = 'HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
 const fontDir = () => path.join(process.env.LOCALAPPDATA, 'Microsoft', 'Windows', 'Fonts');
-const fontUsersDir = () => path.join(process.env.LOCALAPPDATA, 'RetroLooks', 'font-users');
+const fontUsersDir = () => path.join(process.env.LOCALAPPDATA, 'Degauss', 'font-users');
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
@@ -30,7 +30,7 @@ async function registryHasValue(key, name) {
   }
 }
 
-// Installed for this user by Retro Looks, or by the user themselves for the whole machine.
+// Installed for this user by Degauss, or by the user themselves for the whole machine.
 async function isFontInstalled(font) {
   return (await registryHasValue(fontKey(), font.registryName)) || (await registryHasValue(FONT_KEY_MACHINE, font.registryName));
 }

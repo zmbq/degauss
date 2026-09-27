@@ -42,7 +42,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           node tools/release-notes.mjs vscode/CHANGELOG.md "$VERSION" > release-notes.md
-          gh release create "$GITHUB_REF_NAME" --title "Retro Looks for VS Code $VERSION" \
+          gh release create "$GITHUB_REF_NAME" --title "Degauss for VS Code $VERSION" \
             --notes-file release-notes.md --latest=false dist/*.vsix
 
       - name: Publish to VS Code Marketplace

@@ -1,4 +1,4 @@
-// Retro: Degauss: the sound, the effect's math, and the effect through a fake VS Code.
+// Degauss: Degauss!: the sound, the effect's math, and the effect through a fake VS Code.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -18,7 +18,7 @@ test('the build generates the degauss sound for both products', () => {
   assert.strictEqual(wav.toString('ascii', 8, 12), 'WAVE');
   const seconds = wav.readUInt32LE(40) / wav.readUInt32LE(28);
   assert(seconds > 1 && seconds < 3, `about two seconds long (${seconds})`);
-  assert(wav.equals(fs.readFileSync(path.join(root, 'dist', 'powershell', 'RetroLooks', 'degauss.wav'))), 'the module gets the same sound');
+  assert(wav.equals(fs.readFileSync(path.join(root, 'dist', 'powershell', 'Degauss', 'degauss.wav'))), 'the module gets the same sound');
 });
 
 test('the disturbance starts strong and dies away', () => {
@@ -31,16 +31,16 @@ test('the disturbance starts strong and dies away', () => {
   assert.deepStrictEqual([0, 120, 240].map(rainbow), ['#FF0000', '#00FF00', '#0000FF']);
 });
 
-test('Retro: Degauss plays the sound, wobbles and tints the visible editors, and cleans up', async () => {
+test('Degauss: Degauss! plays the sound, wobbles and tints the visible editors, and cleans up', async () => {
   const fake = createFakeVscode();
   fake.editors = [fakeEditor(10, 29)];
   fake.activate();
   await fake.settle();
   fake.answers.push('Apple //e', 'Amber');
-  await fake.commands['retroLooks.choose']();
+  await fake.commands['degauss.choose']();
   played.length = 0;
 
-  await fake.commands['retroLooks.degauss']();
+  await fake.commands['degauss.degauss']();
   assert.deepStrictEqual(played, [path.join(EXTENSION_DIR, 'generated', 'degauss.wav')]);
   const [editor] = fake.editors;
   const lines = (type) => editor.decorations.filter(([t]) => t === type).flatMap(([, ranges]) => ranges.map((r) => r.line));
@@ -51,16 +51,16 @@ test('Retro: Degauss plays the sound, wobbles and tints the visible editors, and
   assert(lines(first).every((l) => l >= 10 && l <= 29), 'only visible lines are decorated');
   assert(fake.decorationTypes.every((t) => t.disposed), 'every decoration is gone at the end');
   const settings = JSON.stringify(fake.settings);
-  await fake.commands['retroLooks.degauss']();
+  await fake.commands['degauss.degauss']();
   assert.strictEqual(JSON.stringify(fake.settings), settings, 'no settings are written');
 });
 
-test('outside a Retro look, the text keeps its colors', async () => {
+test('outside a Degauss look, the text keeps its colors', async () => {
   const fake = createFakeVscode();
   fake.editors = [fakeEditor(0, 5)];
   fake.activate();
   await fake.settle();
-  await fake.commands['retroLooks.degauss']();
+  await fake.commands['degauss.degauss']();
   assert(fake.decorationTypes.length > 0);
   assert(fake.decorationTypes.every((t) => !t.options.color), 'no text color');
   assert(fake.decorationTypes.every((t) => t.disposed));

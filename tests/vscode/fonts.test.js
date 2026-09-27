@@ -1,5 +1,5 @@
 // The extension's font install/uninstall on Windows, against a temporary folder and a throwaway registry
-// key: the fonts are shared with the RetroLooks PowerShell module through marker files.
+// key: the fonts are shared with the Degauss PowerShell module through marker files.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -12,22 +12,22 @@ const windowsOnly = { skip: process.platform !== 'win32' && 'installs fonts on W
 
 // Points LOCALAPPDATA and the fonts registry key at a sandbox for one test.
 function useSandbox(t) {
-  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'retro-looks-test-'));
-  const key = `HKCU\\Software\\RetroLooksTest-${crypto.randomUUID()}\\Fonts`;
-  const saved = { LOCALAPPDATA: process.env.LOCALAPPDATA, key: process.env.RETRO_LOOKS_TEST_FONT_KEY };
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'degauss-test-'));
+  const key = `HKCU\\Software\\DegaussTest-${crypto.randomUUID()}\\Fonts`;
+  const saved = { LOCALAPPDATA: process.env.LOCALAPPDATA, key: process.env.DEGAUSS_TEST_FONT_KEY };
   process.env.LOCALAPPDATA = sandbox;
-  process.env.RETRO_LOOKS_TEST_FONT_KEY = key;
+  process.env.DEGAUSS_TEST_FONT_KEY = key;
   t.after(() => {
     process.env.LOCALAPPDATA = saved.LOCALAPPDATA;
-    if (saved.key === undefined) delete process.env.RETRO_LOOKS_TEST_FONT_KEY;
-    else process.env.RETRO_LOOKS_TEST_FONT_KEY = saved.key;
+    if (saved.key === undefined) delete process.env.DEGAUSS_TEST_FONT_KEY;
+    else process.env.DEGAUSS_TEST_FONT_KEY = saved.key;
     try { execFileSync('reg', ['delete', key.replace(/\\Fonts$/, ''), '/f'], { stdio: 'ignore' }); } catch { /* already gone */ }
     fs.rmSync(sandbox, { recursive: true, force: true });
   });
 
   const { EXTENSION_DIR } = require('./helpers/fake-vscode');
   const fonts = JSON.parse(fs.readFileSync(path.join(EXTENSION_DIR, 'generated', 'fonts.json'), 'utf8'));
-  const usersDir = path.join(sandbox, 'RetroLooks', 'font-users');
+  const usersDir = path.join(sandbox, 'Degauss', 'font-users');
   return {
     fonts,
     fontDir: path.join(sandbox, 'Microsoft', 'Windows', 'Fonts'),
@@ -49,13 +49,13 @@ test('installing registers and copies the fonts and adds a marker', windowsOnly,
   fake.activate();
   await fake.settle();
 
-  assert.strictEqual(fake.context['retroLooks.fontsInstalled'], false, 'Install Fonts is offered while fonts are missing');
-  await fake.commands['retroLooks.install']();
-  assert.strictEqual(fake.context['retroLooks.fontsInstalled'], true, 'and hidden once they are installed');
+  assert.strictEqual(fake.context['degauss.fontsInstalled'], false, 'Install Fonts is offered while fonts are missing');
+  await fake.commands['degauss.install']();
+  assert.strictEqual(fake.context['degauss.fontsInstalled'], true, 'and hidden once they are installed');
   assert.strictEqual(box.registered(), box.fonts.length, 'all fonts registered');
   for (const f of box.fonts) assert(fs.existsSync(path.join(box.fontDir, f.installedFile)), `${f.installedFile} copied`);
-  assert.match(fs.readFileSync(box.marker('vscode'), 'utf8'), /Retro Looks for VS Code \d/);
-  assert(!('retroLooks.uninstall' in fake.commands), 'no separate uninstall command: uninstalling the extension does it');
+  assert.match(fs.readFileSync(box.marker('vscode'), 'utf8'), /Degauss for VS Code \d/);
+  assert(!('degauss.uninstall' in fake.commands), 'no separate uninstall command: uninstalling the extension does it');
 });
 
 test('the uninstall hook removes the fonts unless the PowerShell module still uses them', windowsOnly, async (t) => {
@@ -64,20 +64,20 @@ test('the uninstall hook removes the fonts unless the PowerShell module still us
   const fake = createFakeVscode();
   fake.activate();
   await fake.settle();
-  await fake.commands['retroLooks.install']();
+  await fake.commands['degauss.install']();
 
-  fs.writeFileSync(box.marker('powershell'), 'Retro Looks for Windows Terminal');
+  fs.writeFileSync(box.marker('powershell'), 'Degauss for Windows Terminal');
   box.runUninstallHook();
   assert(!fs.existsSync(box.marker('vscode')), 'own marker removed');
   assert(fs.existsSync(box.marker('powershell')), "the module's marker is left alone");
   assert.strictEqual(box.registered(), box.fonts.length, 'fonts kept for the module');
 
   fs.rmSync(box.marker('powershell'));
-  fs.writeFileSync(box.marker('vscode'), 'Retro Looks for VS Code');
+  fs.writeFileSync(box.marker('vscode'), 'Degauss for VS Code');
   box.runUninstallHook();
   assert.strictEqual(box.registered(), 0, 'fonts removed');
   for (const f of box.fonts) assert(!fs.existsSync(path.join(box.fontDir, f.installedFile)), `${f.installedFile} deleted`);
-  assert(!fs.existsSync(path.dirname(box.usersDir)), 'no RetroLooks folder left behind');
+  assert(!fs.existsSync(path.dirname(box.usersDir)), 'no Degauss folder left behind');
 });
 
 test('fonts installed before markers existed are adopted when the extension starts', windowsOnly, async (t) => {
@@ -86,7 +86,7 @@ test('fonts installed before markers existed are adopted when the extension star
   const fake = createFakeVscode();
   fake.activate();
   await fake.settle();
-  await fake.commands['retroLooks.install']();
+  await fake.commands['degauss.install']();
   fs.rmSync(box.marker('vscode'));
 
   const restarted = createFakeVscode();
@@ -108,10 +108,10 @@ test('"Don\'t Show Again" lasts for this installation; a reinstall reminds again
   };
 
   // Dismissed by an earlier installation (what VS Code keeps after an uninstall): remind again.
-  const state = new Map([['retroLooks.installReminderDismissed', true]]);
+  const state = new Map([['degauss.installReminderDismissed', true]]);
   assert(await start(state, "Don't Show Again"), 'reminds after a reinstall');
   assert(!(await start(state)), "Don't Show Again is honored for this installation");
 
-  state.set('retroLooks.installReminderDismissed', 'some other installation');
+  state.set('degauss.installReminderDismissed', 'some other installation');
   assert(await start(state), 'a different installation is reminded');
 });

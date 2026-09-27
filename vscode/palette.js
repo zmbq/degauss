@@ -47,7 +47,7 @@ function resolveColor(input) {
 }
 
 // Every shade is the phosphor color dimmed toward black or lit toward white.
-// powershell/RetroLooks/RetroLooks.psm1 (Get-PhosphorPalette) must compute exactly the same.
+// powershell/Degauss/Degauss.psm1 (Get-PhosphorPalette) must compute exactly the same.
 function phosphorPalette(color) {
   const dark = (t) => mix('#000000', color, t);
   const light = (t) => mix(color, '#FFFFFF', t);

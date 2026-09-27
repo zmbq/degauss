@@ -1,16 +1,16 @@
-// Retro Looks: switches theme + fonts together, restores the previous look on "Retro: Off",
-// and (on Windows) installs the bundled fonts. Windows Terminal is the RetroLooks PowerShell module's job.
+// Degauss: switches theme + fonts together, restores the previous look on "Degauss: Off",
+// and (on Windows) installs the bundled fonts. Windows Terminal is the Degauss PowerShell module's job.
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 const { PRESETS, resolveColor, phosphorPalette, fillTemplate } = require('./palette');
-const retroFonts = require('./fonts');
+const fonts = require('./fonts');
 const { degauss } = require('./degauss');
 
-const SAVED_KEY = 'retroLooks.saved';
-const ACTIVE_KEY = 'retroLooks.activeLook'; // id of the look applied by the extension, if any
-const REMIND_DISMISSED_KEY = 'retroLooks.installReminderDismissed'; // per machine: fonts are per machine
+const SAVED_KEY = 'degauss.saved';
+const ACTIVE_KEY = 'degauss.activeLook'; // id of the look applied by the extension, if any
+const REMIND_DISMISSED_KEY = 'degauss.installReminderDismissed'; // per machine: fonts are per machine
 const isWindows = process.platform === 'win32';
 
 let extensionPath;
@@ -25,7 +25,7 @@ function run(command, args) {
 
 // ---------- degauss ----------
 
-// The active Retro look's text color swirls; other themes' text only wobbles.
+// The active Degauss look's text color swirls; other themes' text only wobbles.
 function degaussColor(context, looks) {
   const look = looks.find((l) => l.id === context.globalState.get(ACTIVE_KEY));
   if (!look) return undefined;
@@ -35,7 +35,7 @@ function degaussColor(context, looks) {
 
 // ---------- font size ----------
 
-const pixelPerfect = () => vscode.workspace.getConfiguration('retroLooks').get('pixelPerfectFontSize');
+const pixelPerfect = () => vscode.workspace.getConfiguration('degauss').get('pixelPerfectFontSize');
 
 // The Windows display DPI (96 = 100% scaling). Other platforms don't expose it to extensions: 96.
 async function windowsDpi() {
@@ -130,7 +130,7 @@ const themeKey = (look) => `[${look.theme}]`;
 const presetLabel = (preset) => preset[0].toUpperCase() + preset.slice(1);
 
 function savedColors() {
-  return vscode.workspace.getConfiguration('retroLooks').get('phosphorColors') ?? {};
+  return vscode.workspace.getConfiguration('degauss').get('phosphorColors') ?? {};
 }
 
 // The look's chosen color as stored (a preset name or #RRGGBB), falling back to its default.
@@ -143,7 +143,7 @@ async function saveColorChoice(look, value) {
   const colors = { ...savedColors() };
   if (resolveColor(value) === resolveColor(look.monochrome.defaultColor)) delete colors[look.id];
   else colors[look.id] = value;
-  await vscode.workspace.getConfiguration('retroLooks').update(
+  await vscode.workspace.getConfiguration('degauss').update(
     'phosphorColors', Object.keys(colors).length ? colors : undefined, vscode.ConfigurationTarget.Global
   );
 }
@@ -202,7 +202,7 @@ async function pickColor(look) {
 async function setColor(context, looks) {
   const active = looks.find((l) => l.id === context.globalState.get(ACTIVE_KEY));
   if (!active?.monochrome) {
-    vscode.window.showInformationMessage('Retro Looks: choose a monochrome look first (Retro: Choose Look…).');
+    vscode.window.showInformationMessage('Degauss: choose a monochrome look first (Degauss: Choose Look…).');
     return;
   }
   const value = await pickColor(active);
@@ -215,7 +215,7 @@ async function setColor(context, looks) {
 
 async function applyLook(context, look) {
   let installFonts = false;
-  if (isWindows && !(await retroFonts.isFontInstalled(look.font))) {
+  if (isWindows && !(await fonts.isFontInstalled(look.font))) {
     const choice = await vscode.window.showWarningMessage(
       `The "${look.font.family}" font isn't installed yet.`,
       'Install Fonts', 'Apply Anyway'
@@ -238,7 +238,7 @@ async function applyLook(context, look) {
 async function restore(context, looks) {
   const saved = context.globalState.get(SAVED_KEY);
   if (!saved) {
-    vscode.window.showInformationMessage('Retro Looks: no retro look is active.');
+    vscode.window.showInformationMessage('Degauss: no retro look is active.');
     return;
   }
   const config = vscode.workspace.getConfiguration();
@@ -287,9 +287,9 @@ async function migrateOldLooks(context, looks) {
 
 // The fonts live in fonts.js, shared with the uninstall hook (uninstall.js), which removes them when the
 // extension is uninstalled. They're installed in the same place and under the same names as by the
-// RetroLooks PowerShell module, and each project leaves a marker, so uninstalling one never removes fonts
+// Degauss PowerShell module, and each project leaves a marker, so uninstalling one never removes fonts
 // the other still uses.
-const MARKER_DESCRIPTION = () => `Retro Looks for VS Code ${require('./package.json').version}`;
+const MARKER_DESCRIPTION = () => `Degauss for VS Code ${require('./package.json').version}`;
 
 async function install() {
   if (!isWindows) {
@@ -300,13 +300,13 @@ async function install() {
     if (choice) openFonts();
     return;
   }
-  await retroFonts.installFonts(readJson(generated('fonts.json')), generated('fonts'), MARKER_DESCRIPTION());
+  await fonts.installFonts(readJson(generated('fonts.json')), generated('fonts'), MARKER_DESCRIPTION());
   await updateFontsContext();
 
   // A running VS Code keeps the font list it loaded at startup; reloading the window doesn't refresh it,
   // and extensions can't relaunch VS Code, so the best we can offer is quitting.
   const choice = await vscode.window.showInformationMessage(
-    'Retro Looks: fonts installed. Quit VS Code and start it again to see them (reloading the window isn\'t enough).',
+    'Degauss: fonts installed. Quit VS Code and start it again to see them (reloading the window isn\'t enough).',
     'Quit VS Code', 'Later'
   );
   if (choice === 'Quit VS Code') await vscode.commands.executeCommand('workbench.action.quit');
@@ -315,20 +315,20 @@ async function install() {
 // Installations from before the markers existed: if the fonts are installed and the extension has no
 // marker yet, it adopts them, so uninstalling the other project won't remove them.
 async function adoptInstalledFonts() {
-  if (!isWindows || retroFonts.hasMarker()) return;
-  if (await allFontsInstalled()) retroFonts.addMarker(MARKER_DESCRIPTION());
+  if (!isWindows || fonts.hasMarker()) return;
+  if (await allFontsInstalled()) fonts.addMarker(MARKER_DESCRIPTION());
 }
 
 // Windows only; elsewhere the extension can't tell yet.
 async function allFontsInstalled() {
   if (!isWindows) return false;
-  const installed = await Promise.all(readJson(generated('fonts.json')).map(retroFonts.isFontInstalled));
+  const installed = await Promise.all(readJson(generated('fonts.json')).map(fonts.isFontInstalled));
   return installed.every(Boolean);
 }
 
-// Retro: Install Fonts only shows in the Command Palette while the fonts are missing (see package.json menus).
+// Degauss: Install Fonts only shows in the Command Palette while the fonts are missing (see package.json menus).
 async function updateFontsContext() {
-  await vscode.commands.executeCommand('setContext', 'retroLooks.fontsInstalled', await allFontsInstalled());
+  await vscode.commands.executeCommand('setContext', 'degauss.fontsInstalled', await allFontsInstalled());
 }
 
 function openFonts() {
@@ -356,7 +356,7 @@ async function remindToInstall(context) {
     // Font installation can't be checked outside Windows yet, so just point at the fonts once.
     await dismissReminder(context);
     const choice = await vscode.window.showInformationMessage(
-      'Retro Looks needs its fonts installed. Install them with your system\'s font installer.',
+      'Degauss needs its fonts installed. Install them with your system\'s font installer.',
       'Open Fonts Folder'
     );
     if (choice) openFonts();
@@ -366,7 +366,7 @@ async function remindToInstall(context) {
   if (await allFontsInstalled()) return;
 
   const choice = await vscode.window.showInformationMessage(
-    'Retro Looks: install the retro fonts? The looks need them.',
+    'Degauss: install the retro fonts? The looks need them.',
     'Install', 'Later', 'Don\'t Show Again'
   );
   if (choice === 'Install') await install();
@@ -380,28 +380,28 @@ function activate(context) {
   const looks = readJson(generated('looks.json'));
   const register = (id, fn) => context.subscriptions.push(vscode.commands.registerCommand(id, fn));
 
-  for (const look of looks) register(`retroLooks.apply.${look.id}`, () => applyLook(context, look));
-  register('retroLooks.choose', () => choose(context, looks));
-  register('retroLooks.setColor', () => setColor(context, looks));
-  register('retroLooks.off', () => restore(context, looks));
-  register('retroLooks.degauss', () => degauss(vscode, { sound: generated('degauss.wav'), color: degaussColor(context, looks) }));
-  register('retroLooks.install', () => install());
-  register('retroLooks.openFonts', () => openFonts());
+  for (const look of looks) register(`degauss.apply.${look.id}`, () => applyLook(context, look));
+  register('degauss.choose', () => choose(context, looks));
+  register('degauss.setColor', () => setColor(context, looks));
+  register('degauss.off', () => restore(context, looks));
+  register('degauss.degauss', () => degauss(vscode, { sound: generated('degauss.wav'), color: degaussColor(context, looks) }));
+  register('degauss.install', () => install());
+  register('degauss.openFonts', () => openFonts());
 
-  // Editing retroLooks.phosphorColors by hand recolors the active look right away.
+  // Editing degauss.phosphorColors by hand recolors the active look right away.
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration((event) => {
-    if (!event.affectsConfiguration('retroLooks.phosphorColors')) return;
+    if (!event.affectsConfiguration('degauss.phosphorColors')) return;
     const active = looks.find((l) => l.id === context.globalState.get(ACTIVE_KEY));
-    if (active) applyColor(active).catch((err) => console.error('Retro Looks: recoloring failed', err));
+    if (active) applyColor(active).catch((err) => console.error('Degauss: recoloring failed', err));
   }));
 
   // Startup checks run in the background; the tests wait for them through _internal.startup().
   startup = Promise.all([
-    migrateOldLooks(context, looks).catch((err) => console.error('Retro Looks: migration failed', err)),
+    migrateOldLooks(context, looks).catch((err) => console.error('Degauss: migration failed', err)),
     adoptInstalledFonts()
       .then(updateFontsContext)
       .then(() => remindToInstall(context))
-      .catch((err) => console.error('Retro Looks: font check failed', err)),
+      .catch((err) => console.error('Degauss: font check failed', err)),
   ]);
 }
 

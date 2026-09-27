@@ -12,16 +12,16 @@ const exists = (...parts) => fs.existsSync(path.join(root, ...parts));
 const looks = fs.readdirSync(path.join(root, 'looks')).map((id) => ({ id, ...read('looks', id, 'look.json') }));
 const pkg = read('vscode', 'package.json');
 const generatedLooks = read('vscode', 'generated', 'looks.json');
-const moduleDir = ['dist', 'powershell', 'RetroLooks'];
-const fragment = read(...moduleDir, 'retro-looks.json');
+const moduleDir = ['dist', 'powershell', 'Degauss'];
+const fragment = read(...moduleDir, 'degauss.json');
 
 test('each product has its own version, with a changelog entry for it', async () => {
   const semver = /^\d+\.\d+\.\d+$/;
   assert.match(pkg.version, semver, 'the extension version (vscode/package.json)');
-  const manifest = fs.readFileSync(path.join(root, 'powershell', 'RetroLooks', 'RetroLooks.psd1'), 'utf8');
+  const manifest = fs.readFileSync(path.join(root, 'powershell', 'Degauss', 'Degauss.psd1'), 'utf8');
   const moduleVersion = manifest.match(/ModuleVersion\s*=\s*'([^']+)'/)?.[1];
-  assert.match(moduleVersion ?? '', semver, 'the module version (RetroLooks.psd1)');
-  assert.strictEqual(fs.readFileSync(path.join(root, ...moduleDir, 'RetroLooks.psd1'), 'utf8'), manifest, 'the manifest ships as written');
+  assert.match(moduleVersion ?? '', semver, 'the module version (Degauss.psd1)');
+  assert.strictEqual(fs.readFileSync(path.join(root, ...moduleDir, 'Degauss.psd1'), 'utf8'), manifest, 'the manifest ships as written');
 
   // The release workflows use these entries as the release notes.
   const { releaseNotes } = await import('../../tools/release-notes.mjs');
@@ -35,7 +35,7 @@ test('both projects install the same fonts under the same names', () => {
   const vscodeFonts = read('vscode', 'generated', 'fonts.json');
   assert.deepStrictEqual(read(...moduleDir, 'fonts.json'), vscodeFonts);
   for (const font of vscodeFonts) {
-    assert.strictEqual(font.installedFile, `RetroLooks-${font.file}`);
+    assert.strictEqual(font.installedFile, `Degauss-${font.file}`);
     assert.strictEqual(font.registryName, `${font.family} (TrueType)`);
     for (const file of [font.file, 'LICENSE.txt', 'font.json']) {
       assert(exists('vscode', 'generated', 'fonts', font.id, file), `VS Code: ${font.id}/${file}`);
@@ -50,11 +50,11 @@ test('the VS Code extension no longer ships Windows Terminal profiles', () => {
 });
 
 test('the PowerShell package has the module, its installer and the licenses', () => {
-  for (const file of ['RetroLooks.psd1', 'RetroLooks.psm1', 'fonts.json', 'retro-looks.json', 'LICENSE', 'THIRD-PARTY-NOTICES.md']) {
+  for (const file of ['Degauss.psd1', 'Degauss.psm1', 'fonts.json', 'degauss.json', 'LICENSE', 'THIRD-PARTY-NOTICES.md']) {
     assert(exists(...moduleDir, file), file);
   }
   for (const file of ['install.ps1', 'LICENSE', 'THIRD-PARTY-NOTICES.md']) assert(exists('dist', 'powershell', file), file);
-  assert(exists('dist', 'retro-looks-powershell.zip') && exists('dist', 'retro-looks-powershell.zip.sha256'));
+  assert(exists('dist', 'degauss-powershell.zip') && exists('dist', 'degauss-powershell.zip.sha256'));
 });
 
 test('every look has a Terminal profile with a unique GUID and an existing scheme', () => {
@@ -91,7 +91,7 @@ test('VS Code looks have a theme, a command and a template when monochrome', () 
   const commands = new Set(pkg.contributes.commands.map((c) => c.command));
   const themes = new Map(pkg.contributes.themes.map((t) => [t.label, t.path]));
   for (const look of generatedLooks) {
-    assert(commands.has(`retroLooks.apply.${look.id}`), `${look.id}: command`);
+    assert(commands.has(`degauss.apply.${look.id}`), `${look.id}: command`);
     const themePath = themes.get(look.theme);
     assert(themePath, `${look.id}: theme "${look.theme}" contributed`);
     const theme = read('vscode', themePath);
@@ -104,16 +104,16 @@ test('VS Code looks have a theme, a command and a template when monochrome', () 
 test('every command in package.json is registered by the extension', () => {
   const source = fs.readFileSync(path.join(root, 'vscode', 'extension.js'), 'utf8');
   for (const { command } of pkg.contributes.commands) {
-    if (command.startsWith('retroLooks.apply.')) continue; // registered in a loop over looks.json
+    if (command.startsWith('degauss.apply.')) continue; // registered in a loop over looks.json
     assert(source.includes(`'${command}'`), `${command} is registered`);
   }
 });
 
-test('Retro: Install Fonts is only in the Command Palette while the fonts are missing', () => {
-  const entry = pkg.contributes.menus.commandPalette.find((m) => m.command === 'retroLooks.install');
-  assert.strictEqual(entry?.when, '!retroLooks.fontsInstalled');
+test('Degauss: Install Fonts is only in the Command Palette while the fonts are missing', () => {
+  const entry = pkg.contributes.menus.commandPalette.find((m) => m.command === 'degauss.install');
+  assert.strictEqual(entry?.when, '!degauss.fontsInstalled');
   const source = fs.readFileSync(path.join(root, 'vscode', 'extension.js'), 'utf8');
-  assert(source.includes("'setContext', 'retroLooks.fontsInstalled'"), 'the extension sets the context key');
+  assert(source.includes("'setContext', 'degauss.fontsInstalled'"), 'the extension sets the context key');
 });
 
 test('release notes are the changelog entry for the version', async () => {

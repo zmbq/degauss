@@ -1,6 +1,6 @@
 """Phosphor colors of vintage monochrome monitors.
 
-A sample file for Retro Looks screenshots: it uses comments, strings,
+A sample file for Degauss screenshots: it uses comments, strings,
 keywords, numbers, imports and a decorator, so every look shows all its colors.
 """
 from dataclasses import dataclass

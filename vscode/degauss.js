@@ -1,4 +1,4 @@
-// Retro: Degauss. Pressing a CRT's degauss button made the picture wobble and swirl with color for a
+// Degauss: Degauss!. Pressing a CRT's degauss button made the picture wobble and swirl with color for a
 // second, with a loud hum. VS Code doesn't let extensions bend the whole window, so this wobbles and tints
 // the visible editors with temporary decorations (nothing is written to settings) while the system plays
 // the sound (generated/degauss.wav, synthesized by tools/degauss-sound.mjs).
@@ -53,7 +53,7 @@ function playSound(file) {
 let running = false;
 
 // Wobbles and tints the visible editors. `color` is the look's text color (hue-rotated while it swirls);
-// without one (not a Retro look), the text keeps its colors and only wobbles.
+// without one (not a Degauss look), the text keeps its colors and only wobbles.
 async function degauss(vscode, { sound, color }) {
   if (running) return;
   running = true;

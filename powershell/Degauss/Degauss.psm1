@@ -1,9 +1,9 @@
-# RetroLooks: vintage computer looks for Windows Terminal. Installs the fonts (current user only, no admin
+# Degauss: vintage computer looks for Windows Terminal. Installs the fonts (current user only, no admin
 # needed) and a Windows Terminal fragment with one hidden profile per look (only a profile can set a tab's
 # font), so the user's settings.json is never touched. The looks are used through two commands:
-#   Set-RetroLook (look)    opens a tab with a look, in the current folder, and closes the old one
-#   Set-RetroColor (color)  recolors the current tab, like DOS's COLOR command
-# and, for fun, Invoke-RetroDegauss (degauss), which does what a CRT's degauss button did.
+#   Set-DegaussLook (look)    opens a tab with a look, in the current folder, and closes the old one
+#   Set-DegaussColor (color)  recolors the current tab, like DOS's COLOR command
+# and, for fun, Invoke-Degauss (degauss), which does what a CRT's degauss button did.
 # Works on Windows PowerShell 5.1 and PowerShell 7.
 
 $script:ModuleRoot = $PSScriptRoot
@@ -12,29 +12,29 @@ $script:ModuleRoot = $PSScriptRoot
 $script:FontDir = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
 $script:FontKey = 'HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts'
 # Never rename this folder: Windows Terminal ties users' profile settings to it.
-$script:FragmentDir = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows Terminal\Fragments\Retro Looks'
+$script:FragmentDir = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows Terminal\Fragments\Degauss'
 # Preferences (terminal.json: default look, default colors) and the color handed to a tab `look` opens.
-$script:DataDir = Join-Path $env:LOCALAPPDATA 'RetroLooks'
-# The Retro Looks VS Code extension installs the same fonts. Each project that uses them leaves a marker
+$script:DataDir = Join-Path $env:LOCALAPPDATA 'Degauss'
+# The Degauss VS Code extension installs the same fonts. Each project that uses them leaves a marker
 # file here; the fonts are only removed once no marker is left.
 $script:FontUsersDir = Join-Path $script:DataDir 'font-users'
 $script:Marker = 'powershell'
-$script:UserNames = @{ vscode = 'the Retro Looks VS Code extension' }
+$script:UserNames = @{ vscode = 'the Degauss VS Code extension' }
 # Installed font files start with this; matches installedFile in fonts.json (see tools/build.mjs).
-$script:FontFilePrefix = 'RetroLooks-'
+$script:FontFilePrefix = 'Degauss-'
 # The tests replace this with a fake that records its arguments.
 $script:WtCommand = 'wt.exe'
-# The one visible profile, "Retro Looks": a copy of the user's default look. Its GUID never changes, so it
+# The one visible profile, "Degauss": a copy of the user's default look. Its GUID never changes, so it
 # can be Windows Terminal's default profile and stay that way when the default look changes.
-$script:RetroProfileGuid = '{a6d71c0c-85f8-4da5-86cb-db4958ba596b}'
-$script:RetroProfileName = 'Retro Looks'
+$script:DegaussProfileGuid = '{79eea499-748d-4441-821d-451f0c283c2e}'
+$script:DegaussProfileName = 'Degauss'
 # The look `look` opens when nothing else was chosen.
 $script:FallbackLook = 'apple2e'
 # Asks the user a yes/no question (default yes). The tests replace it with a scripted answer.
 $script:AskUser = {
     param([string]$Question)
     $choices = [System.Management.Automation.Host.ChoiceDescription[]]@('&Yes', '&No')
-    return $Host.UI.PromptForChoice('Retro Looks', $Question, $choices, 0) -eq 0
+    return $Host.UI.PromptForChoice('Degauss', $Question, $choices, 0) -eq 0
 }
 
 $Esc = [char]27
@@ -43,7 +43,7 @@ $St = "$Esc\"   # String Terminator, ends an OSC sequence
 # ---------- data shipped with the module ----------
 
 # Windows PowerShell 5.1's ConvertFrom-Json emits a JSON array as one object; these emit items one by one.
-function Get-RetroFont {
+function Get-DegaussFont {
     $fonts = Get-Content (Join-Path $script:ModuleRoot 'fonts.json') -Raw | ConvertFrom-Json
     foreach ($font in $fonts) { $font }
 }
@@ -72,10 +72,10 @@ function Get-DisplayDpi {
     return 96
 }
 
-function Install-RetroFont {
+function Install-DegaussFont {
     New-Item -ItemType Directory -Force $script:FontDir | Out-Null
     if (-not (Test-Path $script:FontKey)) { New-Item $script:FontKey -Force | Out-Null }
-    foreach ($font in Get-RetroFont) {
+    foreach ($font in Get-DegaussFont) {
         $source = Join-Path $script:ModuleRoot "fonts\$($font.id)\$($font.file)"
         $dest = Join-Path $script:FontDir $font.installedFile
         # Installed fonts may be locked by running apps; identical files don't need copying.
@@ -87,8 +87,8 @@ function Install-RetroFont {
     }
 }
 
-# Removes every Retro Looks font, including ones from older versions, by their file name prefix.
-function Uninstall-RetroFont {
+# Removes every Degauss font, including ones from older versions, by their file name prefix.
+function Uninstall-DegaussFont {
     if (-not (Test-Path $script:FontKey)) { return }
     $entries = (Get-ItemProperty $script:FontKey).PSObject.Properties |
         Where-Object { $_.Value -is [string] -and (Split-Path $_.Value -Leaf) -like "$script:FontFilePrefix*" }
@@ -106,7 +106,7 @@ function Uninstall-RetroFont {
 function Add-FontMarker {
     New-Item -ItemType Directory -Force $script:FontUsersDir | Out-Null
     $version = $ExecutionContext.SessionState.Module.Version
-    $line = "Retro Looks for Windows Terminal (RetroLooks module $version), $((Get-Date).ToUniversalTime().ToString('o'))"
+    $line = "Degauss for Windows Terminal (Degauss module $version), $((Get-Date).ToUniversalTime().ToString('o'))"
     [IO.File]::WriteAllText((Join-Path $script:FontUsersDir $script:Marker), "$line`n")
 }
 
@@ -148,7 +148,7 @@ function Get-MixedColor([string]$From, [string]$To, [double]$T) {
 }
 
 # A preset name or #RRGGBB (# optional) -> '#RRGGBB', brightened like a glowing phosphor; $null if invalid.
-function Resolve-RetroColor([string]$Value) {
+function Resolve-DegaussColor([string]$Value) {
     if (-not $Value) { return $null }
     $data = Get-PaletteData
     $name = $Value.Trim().ToLower()
@@ -183,7 +183,7 @@ function Get-PhosphorPalette([string]$Color) {
 }
 
 # The Terminal color scheme (background, foreground, the 16 ANSI colors, ...) of a style in a color.
-function Get-RetroScheme([string]$Style, [string]$Color) {
+function Get-DegaussScheme([string]$Style, [string]$Color) {
     $palette = Get-PhosphorPalette $Color
     $template = Get-Content (Join-Path $script:ModuleRoot "templates\$Style-terminal-scheme.json") -Raw
     $filled = [regex]::Replace($template, '\$\{(\w+)\}', {
@@ -203,14 +203,14 @@ $script:DosColors = @('#000000', '#0000AA', '#00AA00', '#00AAAA', '#AA0000', '#A
 # On a black background, a DOS color that matches a phosphor preset means that preset.
 $script:DosPresets = @{ 0xA = 'green'; 0xE = 'yellow'; 0xF = 'white'; 0xB = 'cyan'; 0x6 = 'amber' }
 
-# Parses what Set-RetroColor accepts. Returns @{ Stored = <normalized text>; Phosphor = '#RRGGBB' } for a
+# Parses what Set-DegaussColor accepts. Returns @{ Stored = <normalized text>; Phosphor = '#RRGGBB' } for a
 # phosphor color, or @{ Stored; Foreground; Background } for a DOS code with a background.
 function ConvertFrom-ColorSpec([string]$Spec) {
     $value = $Spec.Trim()
     $presets = (Get-PaletteData).presets.PSObject.Properties.Name
-    if ($presets -contains $value.ToLower()) { return @{ Stored = $value.ToLower(); Phosphor = (Resolve-RetroColor $value) } }
+    if ($presets -contains $value.ToLower()) { return @{ Stored = $value.ToLower(); Phosphor = (Resolve-DegaussColor $value) } }
     if ($value -match '^#?[0-9a-fA-F]{6}$') {
-        $color = Resolve-RetroColor $value
+        $color = Resolve-DegaussColor $value
         if (-not $color) { throw "'$Spec' is black; pick a color that glows." }
         return @{ Stored = '#' + $value.TrimStart('#').ToUpper(); Phosphor = $color }
     }
@@ -220,7 +220,7 @@ function ConvertFrom-ColorSpec([string]$Spec) {
         $foreground = [Convert]::ToInt32($code.Substring(1, 1), 16)
         if ($background -eq $foreground) { throw "COLOR ${code}: the text and background colors can't be the same (DOS agreed)." }
         if ($background -eq 0) {
-            $phosphor = if ($script:DosPresets.ContainsKey($foreground)) { Resolve-RetroColor $script:DosPresets[$foreground] } else { Resolve-RetroColor $script:DosColors[$foreground] }
+            $phosphor = if ($script:DosPresets.ContainsKey($foreground)) { Resolve-DegaussColor $script:DosPresets[$foreground] } else { Resolve-DegaussColor $script:DosColors[$foreground] }
             return @{ Stored = $code; Phosphor = $phosphor }
         }
         return @{ Stored = $code; Foreground = $script:DosColors[$foreground]; Background = $script:DosColors[$background] }
@@ -254,11 +254,11 @@ function Get-ColorSequence([hashtable]$Scheme) {
 # Puts the tab back to its profile's own colors.
 $script:ResetSequence = "$Esc]104$St$Esc]110$St$Esc]111$St$Esc]112$St"
 
-# The sequence for a parsed color in a look (or, outside Retro Looks tabs, as a plain phosphor monitor).
+# The sequence for a parsed color in a look (or, outside Degauss tabs, as a plain phosphor monitor).
 function Get-SpecSequence($Parsed, $Look) {
     if ($Parsed.Phosphor) {
         $style = if ($Look) { $Look.colorStyle } else { 'phosphor' }
-        return Get-ColorSequence (Get-RetroScheme $style $Parsed.Phosphor)
+        return Get-ColorSequence (Get-DegaussScheme $style $Parsed.Phosphor)
     }
     # A DOS code with a background: like DOS, only the text and background change.
     return "$Esc]10;$(Format-OscColor $Parsed.Foreground)$St$Esc]11;$(Format-OscColor $Parsed.Background)$St$Esc]12;$(Format-OscColor $Parsed.Foreground)$St"
@@ -271,7 +271,7 @@ function Write-TerminalSequence([string]$Sequence) {
 # Windows Terminal throws away colors set by programs when the input language changes (and in a few other
 # cases; microsoft/terminal#11522). So a tab remembers its color and re-sends it with every prompt: after
 # such a reset, the color is back as soon as a command runs or Enter is pressed. The user's own prompt
-# function is wrapped, not replaced, and Uninstall-RetroLooks puts it back.
+# function is wrapped, not replaced, and Uninstall-Degauss puts it back.
 $script:TabSequence = $null
 $script:OriginalPrompt = $null
 $script:PromptWrapper = {
@@ -298,9 +298,9 @@ function Remove-PromptHook {
 
 # ---------- preferences ----------
 
-# defaultLook: what `look` and the Retro Looks profile open; colors: each look's default color;
-# showProfiles, keepFontSizes: Install-RetroLooks's choices, kept for when the fragment is rewritten.
-function Get-RetroPreference {
+# defaultLook: what `look` and the Degauss profile open; colors: each look's default color;
+# showProfiles, keepFontSizes: Install-Degauss's choices, kept for when the fragment is rewritten.
+function Get-DegaussPreference {
     $prefs = @{ defaultLook = $null; colors = @{}; showProfiles = $false; keepFontSizes = $false; installedVersion = $null }
     $file = Join-Path $script:DataDir 'terminal.json'
     if (Test-Path $file) {
@@ -314,7 +314,7 @@ function Get-RetroPreference {
     return $prefs
 }
 
-function Save-RetroPreference([hashtable]$Prefs) {
+function Save-DegaussPreference([hashtable]$Prefs) {
     New-Item -ItemType Directory -Force $script:DataDir | Out-Null
     $json = [pscustomobject]@{
         defaultLook = $Prefs.defaultLook; colors = [pscustomobject]$Prefs.colors
@@ -340,23 +340,23 @@ function Write-NotInTerminal {
 # `look` needs the fonts and the Terminal profiles. Installing a module never runs its code, so on first use
 # this offers to set them up, and after an update it offers to refresh them. Returns $true when `look` can
 # go ahead right away.
-function Confirm-RetroSetup {
-    if (-not (Test-Path (Join-Path $script:FragmentDir 'retro-looks.json'))) {
-        $question = "Retro Looks isn't set up yet: it needs to install its fonts (for your user only) and add its profiles to Windows Terminal. Set it up now?"
+function Confirm-DegaussSetup {
+    if (-not (Test-Path (Join-Path $script:FragmentDir 'degauss.json'))) {
+        $question = "Degauss isn't set up yet: it needs to install its fonts (for your user only) and add its profiles to Windows Terminal. Set it up now?"
         if (-not (& $script:AskUser $question)) {
-            Write-Host 'Not set up. Run Install-RetroLooks whenever you are ready.'
+            Write-Host 'Not set up. Run Install-Degauss whenever you are ready.'
             return $false
         }
-        Install-RetroLooks
+        Install-Degauss
         Write-Host 'Restart Windows Terminal (close all its windows), then run look again.' -ForegroundColor Yellow
         return $false
     }
-    $prefs = Get-RetroPreference
+    $prefs = Get-DegaussPreference
     $current = Get-ModuleVersion
     if ($prefs.installedVersion -ne $current) {
         $from = if ($prefs.installedVersion) { $prefs.installedVersion } else { 'an earlier version' }
-        if (& $script:AskUser "Retro Looks was updated ($from to $current). Refresh its fonts and Windows Terminal profiles?") {
-            Install-RetroLooks -ShowProfiles:$prefs.showProfiles -KeepFontSizes:$prefs.keepFontSizes
+        if (& $script:AskUser "Degauss was updated ($from to $current). Refresh its fonts and Windows Terminal profiles?") {
+            Install-Degauss -ShowProfiles:$prefs.showProfiles -KeepFontSizes:$prefs.keepFontSizes
             Write-Host 'Looks added in this update appear after you restart Windows Terminal.' -ForegroundColor Yellow
         }
     }
@@ -364,12 +364,12 @@ function Confirm-RetroSetup {
 }
 
 function Get-DefaultLookId([hashtable]$Prefs) {
-    if ($Prefs.defaultLook -and (Find-RetroLook $Prefs.defaultLook)) { return $Prefs.defaultLook }
+    if ($Prefs.defaultLook -and (Find-DegaussLook $Prefs.defaultLook)) { return $Prefs.defaultLook }
     return $script:FallbackLook
 }
 
 # Writes the Windows Terminal fragment: a hidden profile per look (what `look` opens) and the visible
-# Retro Looks profile, a copy of the default look. Terminal reads it when it starts.
+# Degauss profile, a copy of the default look. Terminal reads it when it starts.
 # The Terminal color scheme for a look's default color: one of the shipped preset schemes if it matches,
 # or else a new "<look> Custom" scheme. Returns @{ name; new } (new: the scheme to add, if any).
 function Get-DefaultColorScheme($Entry, [string]$Spec, [string]$CurrentScheme, $Schemes) {
@@ -384,7 +384,7 @@ function Get-DefaultColorScheme($Entry, [string]$Spec, [string]$CurrentScheme, $
     }
     $custom = [ordered]@{ name = "$($Entry.name) Custom" }
     if ($parsed.Phosphor) {
-        $colors = Get-RetroScheme $Entry.colorStyle $parsed.Phosphor
+        $colors = Get-DegaussScheme $Entry.colorStyle $parsed.Phosphor
         foreach ($key in $colors.Keys | Sort-Object) { $custom[$key] = $colors[$key] }
     } else {
         # A DOS code with a background: the look's own colors, with DOS's text and background.
@@ -397,18 +397,18 @@ function Get-DefaultColorScheme($Entry, [string]$Spec, [string]$CurrentScheme, $
     return @{ name = $custom.name; new = [pscustomobject]$custom }
 }
 
-function Write-RetroFragment([hashtable]$Prefs) {
+function Write-DegaussFragment([hashtable]$Prefs) {
     $shell = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { 'pwsh.exe' } else { 'powershell.exe' }
     $pixelsPerEm = @{}
-    foreach ($font in Get-RetroFont) { if ($font.pixelsPerEm) { $pixelsPerEm[$font.family] = [int]$font.pixelsPerEm } }
-    $fragment = Get-Content (Join-Path $script:ModuleRoot 'retro-looks.json') -Raw | ConvertFrom-Json
+    foreach ($font in Get-DegaussFont) { if ($font.pixelsPerEm) { $pixelsPerEm[$font.family] = [int]$font.pixelsPerEm } }
+    $fragment = Get-Content (Join-Path $script:ModuleRoot 'degauss.json') -Raw | ConvertFrom-Json
     $dpi = Get-DisplayDpi
     $schemes = @($fragment.schemes)
     $looksByGuid = @{}
     foreach ($entry in Get-LookData) { $looksByGuid[$entry.guid] = $entry }
     foreach ($terminalProfile in $fragment.profiles) {
         # Each tab applies its saved color (and a color handed over by `look -Color`) when it opens.
-        $terminalProfile | Add-Member -NotePropertyName commandline -NotePropertyValue "$shell -NoLogo -NoExit -Command Initialize-RetroTab" -Force
+        $terminalProfile | Add-Member -NotePropertyName commandline -NotePropertyValue "$shell -NoLogo -NoExit -Command Initialize-DegaussTab" -Force
         $terminalProfile.hidden = -not $Prefs.showProfiles
         $grid = $pixelsPerEm[$terminalProfile.font.face]
         if ($grid -and -not $Prefs.keepFontSizes) {
@@ -426,24 +426,24 @@ function Write-RetroFragment([hashtable]$Prefs) {
     }
     $fragment.schemes = $schemes
 
-    $defaultLook = Find-RetroLook (Get-DefaultLookId $Prefs)
+    $defaultLook = Find-DegaussLook (Get-DefaultLookId $Prefs)
     $source = $fragment.profiles | Where-Object { $_.guid -eq $defaultLook.guid }
-    $retro = $source | ConvertTo-Json -Depth 5 | ConvertFrom-Json   # a copy
-    $retro.guid = $script:RetroProfileGuid
-    $retro.name = $script:RetroProfileName
-    $retro.hidden = $false
+    $visible = $source | ConvertTo-Json -Depth 5 | ConvertFrom-Json   # a copy
+    $visible.guid = $script:DegaussProfileGuid
+    $visible.name = $script:DegaussProfileName
+    $visible.hidden = $false
     # -Look tells the tab which look this copy was made from, so it can notice a newer default.
-    $retro.commandline = "$shell -NoLogo -NoExit -Command Initialize-RetroTab -Look $($defaultLook.id)"
-    $fragment.profiles = @($retro) + @($fragment.profiles)
+    $visible.commandline = "$shell -NoLogo -NoExit -Command Initialize-DegaussTab -Look $($defaultLook.id)"
+    $fragment.profiles = @($visible) + @($fragment.profiles)
 
     New-Item -ItemType Directory -Force $script:FragmentDir | Out-Null
     $json = $fragment | ConvertTo-Json -Depth 10
-    [IO.File]::WriteAllText((Join-Path $script:FragmentDir 'retro-looks.json'), $json, (New-Object Text.UTF8Encoding $false))
+    [IO.File]::WriteAllText((Join-Path $script:FragmentDir 'degauss.json'), $json, (New-Object Text.UTF8Encoding $false))
 }
 
 # ---------- looks ----------
 
-function Find-RetroLook([string]$Name) {
+function Find-DegaussLook([string]$Name) {
     $wanted = $Name.Trim().ToLower()
     foreach ($look in Get-LookData) {
         $names = @($look.id, $look.name) + @($look.aliases) | ForEach-Object { "$_".ToLower() }
@@ -452,12 +452,12 @@ function Find-RetroLook([string]$Name) {
     return $null
 }
 
-# The look of the current Windows Terminal tab: the one Initialize-RetroTab recorded when the tab opened,
+# The look of the current Windows Terminal tab: the one Initialize-DegaussTab recorded when the tab opened,
 # or else the one of the profile Terminal says the tab was opened with.
 function Get-CurrentLook {
     if ($env:TERM_PROGRAM -eq 'vscode') { return $null }   # VS Code's terminal follows the VS Code look
-    if ($env:RETRO_LOOK) {
-        $look = Find-RetroLook $env:RETRO_LOOK
+    if ($env:DEGAUSS_LOOK) {
+        $look = Find-DegaussLook $env:DEGAUSS_LOOK
         if ($look) { return $look }
     }
     if (-not $env:WT_PROFILE_ID) { return $null }
@@ -474,13 +474,13 @@ function Get-LookNames {
 
 # ---------- commands ----------
 
-function Set-RetroColor {
+function Set-DegaussColor {
     <#
     .SYNOPSIS
     Recolors the current terminal tab, like DOS's COLOR command. Alias: color.
     .DESCRIPTION
     Takes a phosphor color (green, amber, white, cyan, yellow or #RRGGBB) or a DOS COLOR code (0A, 1F, ...;
-    the first digit is the background, the second the text). Only this tab changes. In a Retro Looks tab the
+    the first digit is the background, the second the text). Only this tab changes. In a Degauss tab the
     color is applied the way that machine would show it; for example an IBM 3270 tab keeps its two
     brightness levels. Without a color, the tab goes back to its default colors.
     .PARAMETER Color
@@ -501,10 +501,10 @@ function Set-RetroColor {
     )
     $look = Get-CurrentLook
     if ($SetAsDefault -and -not $look) {
-        throw "-SetAsDefault works in a Retro Looks tab (open one with Set-RetroLook, alias look)."
+        throw "-SetAsDefault works in a Degauss tab (open one with Set-DegaussLook, alias look)."
     }
 
-    $prefs = Get-RetroPreference
+    $prefs = Get-DegaussPreference
     if (-not $Color) {
         if ($SetAsDefault) {
             $prefs.colors.Remove($look.id)
@@ -535,9 +535,9 @@ function Set-RetroColor {
 # Saves a look's default color, and puts it in the look's Windows Terminal profile too, so that Terminal's
 # own color resets land on it (after Terminal restarts and reads the profile again).
 function Save-DefaultColor([hashtable]$Prefs, $Look) {
-    Save-RetroPreference $Prefs
-    if (Test-Path (Join-Path $script:FragmentDir 'retro-looks.json')) {
-        Write-RetroFragment $Prefs
+    Save-DegaussPreference $Prefs
+    if (Test-Path (Join-Path $script:FragmentDir 'degauss.json')) {
+        Write-DegaussFragment $Prefs
         Write-Host "Restart Windows Terminal for $($Look.name)'s profile to use it too (so Terminal's own color resets, e.g. when you switch input languages, return to it)."
     }
 }
@@ -553,9 +553,9 @@ $script:PlaySound = {
 $script:DegaussFrames = 32
 $script:DegaussFrameMs = 40
 
-# The scheme a Retro Looks tab opened with: its profile's, in the module's copy of the fragment.
+# The scheme a Degauss tab opened with: its profile's, in the module's copy of the fragment.
 function Get-LookScheme($Look) {
-    $fragment = Get-Content (Join-Path $script:ModuleRoot 'retro-looks.json') -Raw | ConvertFrom-Json
+    $fragment = Get-Content (Join-Path $script:ModuleRoot 'degauss.json') -Raw | ConvertFrom-Json
     $name = $null
     foreach ($p in $fragment.profiles) { if ($p.guid -eq $Look.guid) { $name = $p.colorScheme } }
     foreach ($entry in $fragment.schemes) {
@@ -628,7 +628,7 @@ function Get-DegaussSequence($Colors, [double]$T) {
     return $sequence
 }
 
-function Invoke-RetroDegauss {
+function Invoke-Degauss {
     <#
     .SYNOPSIS
     Degausses the terminal, like the button on a CRT monitor: a hum, and a second of swirling colors. Alias: degauss.
@@ -659,27 +659,27 @@ function Invoke-RetroDegauss {
     }
 }
 
-function Initialize-RetroTab {
+function Initialize-DegaussTab {
     <#
     .SYNOPSIS
-    Sets up a Retro Looks tab when it opens. The Retro Looks profiles run it; you don't need to.
+    Sets up a Degauss tab when it opens. The Degauss profiles run it; you don't need to.
     .PARAMETER Look
-    The look the Retro Looks profile was made from (the other profiles are found by their GUID).
+    The look the Degauss profile was made from (the other profiles are found by their GUID).
     #>
     [CmdletBinding()]
     param([string]$Look)
-    $target = if ($Look) { Find-RetroLook $Look } else { Get-CurrentLook }
+    $target = if ($Look) { Find-DegaussLook $Look } else { Get-CurrentLook }
     if (-not $target) { return }
     # Remember the look for `color`, which otherwise goes by the profile's GUID.
-    $env:RETRO_LOOK = $target.id
+    $env:DEGAUSS_LOOK = $target.id
 
-    # Windows Terminal reads the Retro Looks profile when it starts, so after a new default look it keeps
+    # Windows Terminal reads the Degauss profile when it starts, so after a new default look it keeps
     # opening the old one until it's restarted.
-    $prefs = Get-RetroPreference
+    $prefs = Get-DegaussPreference
     if ($Look) {
-        $default = Find-RetroLook (Get-DefaultLookId $prefs)
+        $default = Find-DegaussLook (Get-DefaultLookId $prefs)
         if ($default.id -ne $target.id) {
-            Write-Host "Your default look is now $($default.name), but Windows Terminal still has $($target.name) loaded for the Retro Looks profile. Close all Windows Terminal windows and reopen it to switch." -ForegroundColor Yellow
+            Write-Host "Your default look is now $($default.name), but Windows Terminal still has $($target.name) loaded for the Degauss profile. Close all Windows Terminal windows and reopen it to switch." -ForegroundColor Yellow
         }
     }
 
@@ -701,7 +701,7 @@ function Initialize-RetroTab {
     }
 }
 
-function Set-RetroLook {
+function Set-DegaussLook {
     <#
     .SYNOPSIS
     Opens a Windows Terminal tab with a retro look, in the current folder, and closes this one. Alias: look.
@@ -712,10 +712,10 @@ function Set-RetroLook {
     .PARAMETER Look
     The look: apple, ps2, ps2mono, 3270, 3270mono (or its full name). Tab completes.
     .PARAMETER Color
-    Open the tab in this color: a preset, #RRGGBB or a DOS code (see Set-RetroColor).
+    Open the tab in this color: a preset, #RRGGBB or a DOS code (see Set-DegaussColor).
     .PARAMETER SetAsDefault
     Also make this look (and -Color, if given) your default: what `look` opens without arguments, and what
-    the Retro Looks profile in Windows Terminal's menu opens (after a Windows Terminal restart).
+    the Degauss profile in Windows Terminal's menu opens (after a Windows Terminal restart).
     .PARAMETER Off
     Open a normal tab (your default Windows Terminal profile) instead.
     .PARAMETER KeepTab
@@ -734,7 +734,7 @@ function Set-RetroLook {
         [switch]$KeepTab
     )
     if ($env:TERM_PROGRAM -eq 'vscode') {
-        Write-Host "This terminal follows the VS Code look. Use 'Retro: Choose Look...' in VS Code's Command Palette."
+        Write-Host "This terminal follows the VS Code look. Use 'Degauss: Choose Look...' in VS Code's Command Palette."
         return
     }
     # Only Windows Terminal can open a tab with a look. Elsewhere, explain (and still allow -SetAsDefault).
@@ -743,14 +743,14 @@ function Set-RetroLook {
         Write-NotInTerminal
         return
     }
-    if ($inTerminal -and -not $Off -and -not (Confirm-RetroSetup)) { return }
+    if ($inTerminal -and -not $Off -and -not (Confirm-DegaussSetup)) { return }
 
     $target = $null
     if (-not $Off) {
-        $prefs = Get-RetroPreference
+        $prefs = Get-DegaussPreference
         $name = $Look
         if (-not $name) { $name = Get-DefaultLookId $prefs }
-        $target = Find-RetroLook $name
+        $target = Find-DegaussLook $name
         if (-not $target) { throw "Unknown look '$name'. Looks: $((Get-LookNames) -join ', ')." }
         $parsed = $null
         if ($Color) { $parsed = ConvertFrom-ColorSpec $Color }
@@ -758,14 +758,14 @@ function Set-RetroLook {
             $previous = Get-DefaultLookId $prefs
             $prefs.defaultLook = $target.id
             if ($parsed) { $prefs.colors[$target.id] = $parsed.Stored }
-            Save-RetroPreference $prefs
-            $installed = Test-Path (Join-Path $script:FragmentDir 'retro-looks.json')
-            if ($installed) { Write-RetroFragment $prefs }
+            Save-DegaussPreference $prefs
+            $installed = Test-Path (Join-Path $script:FragmentDir 'degauss.json')
+            if ($installed) { Write-DegaussFragment $prefs }
             $color = $prefs.colors[$target.id]
             if (-not $color) { $color = $target.defaultColor }
             Write-Host "Default look: $($target.name)$(if ($color) { " ($color)" })."
             if ($installed -and $previous -ne $target.id) {
-                Write-Host 'The Retro Looks profile in Windows Terminal switches to it after you restart Windows Terminal (close all its windows).'
+                Write-Host 'The Degauss profile in Windows Terminal switches to it after you restart Windows Terminal (close all its windows).'
             }
         }
     }
@@ -787,14 +787,14 @@ function Set-RetroLook {
     if (-not $KeepTab) { exit }
 }
 
-function Get-RetroLook {
+function Get-DegaussLook {
     <#
     .SYNOPSIS
-    Lists the Retro Looks, with the names Set-RetroLook accepts and your default colors.
+    Lists the looks, with the names Set-DegaussLook accepts and your default colors.
     #>
     [CmdletBinding()]
     param()
-    $prefs = Get-RetroPreference
+    $prefs = Get-DegaussPreference
     $current = Get-CurrentLook
     foreach ($look in Get-LookData) {
         $color = $prefs.colors[$look.id]
@@ -810,14 +810,14 @@ function Get-RetroLook {
     }
 }
 
-function Install-RetroLooks {
+function Install-Degauss {
     <#
     .SYNOPSIS
-    Installs the Retro Looks fonts and adds the looks to Windows Terminal.
+    Installs the Degauss fonts and adds the looks to Windows Terminal.
     .DESCRIPTION
     Installs the fonts for the current user (no admin needed) and writes a Windows Terminal fragment: one
-    visible profile, Retro Looks, which opens your default look (make it Windows Terminal's default profile
-    if you like), and a hidden profile per look, which Set-RetroLook (alias look) opens. Pixel fonts are
+    visible profile, Degauss, which opens your default look (make it Windows Terminal's default profile
+    if you like), and a hidden profile per look, which Set-DegaussLook (alias look) opens. Pixel fonts are
     sized for the display's scaling so they stay sharp. Restart Windows Terminal afterwards. Running it
     again updates an existing installation.
     .PARAMETER KeepFontSizes
@@ -828,34 +828,34 @@ function Install-RetroLooks {
     [CmdletBinding()]
     param([switch]$KeepFontSizes, [switch]$ShowProfiles)
 
-    Install-RetroFont
+    Install-DegaussFont
     Add-FontMarker
 
-    $prefs = Get-RetroPreference
+    $prefs = Get-DegaussPreference
     $prefs.showProfiles = [bool]$ShowProfiles
     $prefs.keepFontSizes = [bool]$KeepFontSizes
     $prefs.installedVersion = Get-ModuleVersion
-    Save-RetroPreference $prefs
-    Write-RetroFragment $prefs
+    Save-DegaussPreference $prefs
+    Write-DegaussFragment $prefs
 
     if (-not (& $script:IsTerminalInstalled)) {
         Write-Warning 'Windows Terminal is not installed, and the looks need it. The fonts are installed anyway. Get Windows Terminal from the Microsoft Store, or with: winget install Microsoft.WindowsTerminal'
         return
     }
     Write-Host ''
-    Write-Host 'Retro Looks installed. Close all Windows Terminal windows and reopen it. Then open the'
-    Write-Host "Retro Looks profile from Terminal's menu, or type, in any PowerShell tab:"
+    Write-Host 'Degauss installed. Close all Windows Terminal windows and reopen it. Then open the'
+    Write-Host "Degauss profile from Terminal's menu, or type, in any PowerShell tab:"
     Write-Host "  look apple         (or: $((Get-LookNames) -join ', '))"
     Write-Host '  color amber        (or #RRGGBB, or a DOS code like 0A)'
-    Write-Host 'Get-RetroLook lists the looks.'
+    Write-Host 'Get-DegaussLook lists the looks.'
 }
 
-function Uninstall-RetroLooks {
+function Uninstall-Degauss {
     <#
     .SYNOPSIS
-    Removes the Retro Looks from Windows Terminal, and the fonts unless something else still uses them.
+    Removes the looks from Windows Terminal, and the fonts unless something else still uses them.
     .PARAMETER RemoveFonts
-    Remove the fonts even if the Retro Looks VS Code extension still uses them.
+    Remove the fonts even if the Degauss VS Code extension still uses them.
     #>
     [CmdletBinding()]
     param([switch]$RemoveFonts)
@@ -865,7 +865,7 @@ function Uninstall-RetroLooks {
         Remove-Item (Join-Path $script:DataDir $file) -Force -ErrorAction SilentlyContinue
     }
     Remove-PromptHook
-    Write-Host 'Removed the Retro Looks from Windows Terminal.'
+    Write-Host 'Removed the looks from Windows Terminal.'
 
     Remove-FontMarker
     $others = @(Get-OtherFontUser)
@@ -873,7 +873,7 @@ function Uninstall-RetroLooks {
         $names = ($others | ForEach-Object { if ($script:UserNames[$_]) { $script:UserNames[$_] } else { $_ } }) -join ', '
         Write-Host "Kept the fonts: $names still uses them (-RemoveFonts removes them anyway)."
     } else {
-        Uninstall-RetroFont
+        Uninstall-DegaussFont
     }
     Write-Host 'Restart Windows Terminal to finish.'
 }
@@ -890,12 +890,12 @@ $colorCompleter = {
     (Get-PaletteData).presets.PSObject.Properties.Name | Where-Object { $_ -like "$wordToComplete*" } |
         ForEach-Object { [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_) }
 }
-Register-ArgumentCompleter -CommandName Set-RetroLook -ParameterName Look -ScriptBlock $lookCompleter
-Register-ArgumentCompleter -CommandName Set-RetroLook -ParameterName Color -ScriptBlock $colorCompleter
-Register-ArgumentCompleter -CommandName Set-RetroColor -ParameterName Color -ScriptBlock $colorCompleter
+Register-ArgumentCompleter -CommandName Set-DegaussLook -ParameterName Look -ScriptBlock $lookCompleter
+Register-ArgumentCompleter -CommandName Set-DegaussLook -ParameterName Color -ScriptBlock $colorCompleter
+Register-ArgumentCompleter -CommandName Set-DegaussColor -ParameterName Color -ScriptBlock $colorCompleter
 
-Set-Alias -Name look -Value Set-RetroLook
-Set-Alias -Name color -Value Set-RetroColor
-Set-Alias -Name degauss -Value Invoke-RetroDegauss
+Set-Alias -Name look -Value Set-DegaussLook
+Set-Alias -Name color -Value Set-DegaussColor
+Set-Alias -Name degauss -Value Invoke-Degauss
 
-Export-ModuleMember -Function Install-RetroLooks, Uninstall-RetroLooks, Set-RetroLook, Set-RetroColor, Get-RetroLook, Initialize-RetroTab, Invoke-RetroDegauss -Alias look, color, degauss
+Export-ModuleMember -Function Install-Degauss, Uninstall-Degauss, Set-DegaussLook, Set-DegaussColor, Get-DegaussLook, Initialize-DegaussTab, Invoke-Degauss -Alias look, color, degauss

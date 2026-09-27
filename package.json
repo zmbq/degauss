@@ -1,7 +1,7 @@
 {
-  "name": "vscode-retro-build",
+  "name": "degauss-build",
   "private": true,
-  "description": "Build scripts and tests for Retro Looks: the VS Code extension (vscode/) and the PowerShell module for Windows Terminal (powershell/).",
+  "description": "Build scripts and tests for Degauss: the VS Code extension (vscode/) and the PowerShell module for Windows Terminal (powershell/).",
   "scripts": {
     "build": "node tools/build.mjs",
     "test": "node tools/build.mjs && node --test \"tests/**/*.test.js\"",

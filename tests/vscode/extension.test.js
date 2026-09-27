@@ -23,10 +23,10 @@ test('choosing a monochrome look asks for its color and recolors only that theme
   await fake.settle();
 
   fake.answers.push('Apple //e', 'Amber');
-  await fake.commands['retroLooks.choose']();
+  await fake.commands['degauss.choose']();
   const s = fake.settings;
   assert.strictEqual(s['workbench.colorTheme'], 'Apple //e');
-  assert.deepStrictEqual(s['retroLooks.phosphorColors'], { apple2e: 'amber' });
+  assert.deepStrictEqual(s['degauss.phosphorColors'], { apple2e: 'amber' });
   assert.deepStrictEqual(s['workbench.colorCustomizations'][`[${NIGHT_OWL}]`], USER_TWEAK, 'user customization kept');
   assert.strictEqual(s['workbench.colorCustomizations']['[Apple //e]']['editor.background'], '#110C05');
   assert(s['editor.tokenColorCustomizations']['[Apple //e]'].textMateRules.every((r) => r.scope), 'only scoped token rules');
@@ -37,29 +37,29 @@ test('the default color needs no overrides, and custom colors are remembered per
   await fake.settle();
 
   fake.answers.push('Apple //e', 'Green');
-  await fake.commands['retroLooks.choose']();
+  await fake.commands['degauss.choose']();
   assert.strictEqual(fake.settings['workbench.colorCustomizations']['[Apple //e]'], undefined);
   assert.strictEqual(fake.settings['editor.tokenColorCustomizations'], undefined);
-  assert.strictEqual(fake.settings['retroLooks.phosphorColors'], undefined);
+  assert.strictEqual(fake.settings['degauss.phosphorColors'], undefined);
 
   fake.answers.push('Custom…', '#102030');
-  await fake.commands['retroLooks.setColor']();
-  assert.deepStrictEqual(fake.settings['retroLooks.phosphorColors'], { apple2e: '#102030' });
+  await fake.commands['degauss.setColor']();
+  assert.deepStrictEqual(fake.settings['degauss.phosphorColors'], { apple2e: '#102030' });
   assert(fake.settings['workbench.colorCustomizations']['[Apple //e]'], 'custom color applied');
 
   fake.answers.push('IBM 3270 Monochrome', 'Yellow');
-  await fake.commands['retroLooks.choose']();
-  assert.deepStrictEqual(fake.settings['retroLooks.phosphorColors'], { apple2e: '#102030', 'ibm-3270-mono': 'yellow' });
+  await fake.commands['degauss.choose']();
+  assert.deepStrictEqual(fake.settings['degauss.phosphorColors'], { apple2e: '#102030', 'ibm-3270-mono': 'yellow' });
   assert.strictEqual(fake.settings['workbench.colorTheme'], 'IBM 3270 Monochrome');
 });
 
-test('editing retroLooks.phosphorColors by hand recolors the active look', async () => {
+test('editing degauss.phosphorColors by hand recolors the active look', async () => {
   const fake = startWithUserSettings();
   await fake.settle();
   fake.answers.push('Apple //e', 'Green');
-  await fake.commands['retroLooks.choose']();
+  await fake.commands['degauss.choose']();
 
-  await fake.vscode.workspace.getConfiguration('retroLooks').update('phosphorColors', { apple2e: 'cyan' });
+  await fake.vscode.workspace.getConfiguration('degauss').update('phosphorColors', { apple2e: 'cyan' });
   await fake.settle();
   assert(fake.settings['workbench.colorCustomizations']['[Apple //e]'], 'recolored to cyan');
 });
@@ -68,7 +68,7 @@ test('the color IBM 3270 look asks no color question', async () => {
   const fake = startWithUserSettings();
   await fake.settle();
   fake.answers.push('IBM 3270');
-  await fake.commands['retroLooks.choose']();
+  await fake.commands['degauss.choose']();
   assert.strictEqual(fake.settings['workbench.colorTheme'], 'IBM 3270');
   assert.strictEqual(fake.answers.length, 0);
 });
@@ -77,8 +77,8 @@ test('Off restores the user\'s settings but remembers the chosen colors', async 
   const fake = startWithUserSettings();
   await fake.settle();
   fake.answers.push('Apple //e', 'Amber');
-  await fake.commands['retroLooks.choose']();
-  await fake.commands['retroLooks.off']();
+  await fake.commands['degauss.choose']();
+  await fake.commands['degauss.off']();
 
   const s = fake.settings;
   assert.strictEqual(s['workbench.colorTheme'], NIGHT_OWL);
@@ -89,16 +89,16 @@ test('Off restores the user\'s settings but remembers the chosen colors', async 
     'terminal.integrated.fontFamily', 'terminal.integrated.fontSize', 'terminal.integrated.cursorStyle']) {
     assert.strictEqual(s[key], undefined, `${key} removed`);
   }
-  assert.deepStrictEqual(s['retroLooks.phosphorColors'], { apple2e: 'amber' });
+  assert.deepStrictEqual(s['degauss.phosphorColors'], { apple2e: 'amber' });
 });
 
 test('an active v0.1 "Apple //e Amber" look is migrated to Apple //e in amber', async () => {
-  const globalState = new Map([['retroLooks.saved', { 'workbench.colorTheme': NIGHT_OWL }]]);
+  const globalState = new Map([['degauss.saved', { 'workbench.colorTheme': NIGHT_OWL }]]);
   const fake = createFakeVscode();
   fake.settings = { 'workbench.colorTheme': 'Apple //e Amber' };
   fake.activate(globalState);
   await fake.settle();
   assert.strictEqual(fake.settings['workbench.colorTheme'], 'Apple //e');
-  assert.deepStrictEqual(fake.settings['retroLooks.phosphorColors'], { apple2e: 'amber' });
+  assert.deepStrictEqual(fake.settings['degauss.phosphorColors'], { apple2e: 'amber' });
   assert(fake.settings['workbench.colorCustomizations']['[Apple //e]']);
 });

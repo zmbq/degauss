@@ -24,4 +24,4 @@ jobs:
         with:
           node-version: 22
       - run: npm test
-      - run: pwsh -NoProfile -File tests/powershell/RetroLooks.tests.ps1
+      - run: pwsh -NoProfile -File tests/powershell/Degauss.tests.ps1

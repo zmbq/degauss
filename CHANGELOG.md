@@ -1,6 +1,6 @@
 # Changelogs
 
-Retro Looks is two products, each with its own version, changelog and Git tag:
+Degauss is two products, each with its own version, changelog and Git tag:
 
 - VS Code extension: [vscode/CHANGELOG.md](vscode/CHANGELOG.md), tagged `vscode-v1.2.3`
 - PowerShell module for Windows Terminal: [powershell/CHANGELOG.md](powershell/CHANGELOG.md), tagged

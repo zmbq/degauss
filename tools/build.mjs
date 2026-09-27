@@ -1,9 +1,9 @@
 // Builds both projects from looks/ and fonts/:
 //   vscode/generated/...                  themes, templates, looks.json, fonts, degauss.wav (packaged into the VSIX)
 //   vscode/package.json                   "contributes" section (themes + commands) is rewritten
-//   dist/powershell/ + dist/retro-looks-powershell.zip (+ .sha256)
-//                                         the RetroLooks PowerShell module (Windows Terminal) and its installer
-// Each product has its own version (vscode/package.json, powershell/RetroLooks/RetroLooks.psd1) and is
+//   dist/powershell/ + dist/degauss-powershell.zip (+ .sha256)
+//                                         the Degauss PowerShell module (Windows Terminal) and its installer
+// Each product has its own version (vscode/package.json, powershell/Degauss/Degauss.psd1) and is
 // released on its own tag (vscode-v1.2.3, powershell-v1.2.3). Usage: node tools/build.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,7 +26,7 @@ const writeJson = (file, data) => {
 
 // Both projects install the fonts under these names, so either one can find and remove them.
 // The PowerShell module and the extension read them from the generated fonts.json.
-const FONT_FILE_PREFIX = 'RetroLooks-';
+const FONT_FILE_PREFIX = 'Degauss-';
 const registryName = (family) => `${family} (TrueType)`;
 
 // ---------- monochrome looks ----------
@@ -98,7 +98,7 @@ function copyFonts(fonts, destRoot) {
 }
 
 function thirdPartyNotices(fonts) {
-  const lines = ['# Third-party notices', '', 'The fonts bundled with Retro Looks are the work of their authors and keep their own licenses.', ''];
+  const lines = ['# Third-party notices', '', 'The fonts bundled with Degauss are the work of their authors and keep their own licenses.', ''];
   for (const f of Object.values(fonts)) {
     lines.push(`## ${f.family}`, '', `- Author: ${f.author}`, `- Source: ${f.url}`, `- License: ${f.licenseName}`, `- Full license text: fonts/${f.id}/${f.license}`, '');
   }
@@ -150,34 +150,34 @@ function buildVscode(allLooks, fonts) {
   pkg.contributes = {
     themes: looks.map((l) => ({ label: l.name, uiTheme: 'vs-dark', path: `./generated/themes/${l.id}.json` })),
     commands: [
-      { command: 'retroLooks.choose', title: 'Retro: Choose Look…' },
-      ...looks.map((l) => ({ command: `retroLooks.apply.${l.id}`, title: `Retro: ${l.name}` })),
-      { command: 'retroLooks.setColor', title: 'Retro: Set Phosphor Color…' },
-      { command: 'retroLooks.off', title: 'Retro: Off (restore previous look)' },
-      { command: 'retroLooks.degauss', title: 'Retro: Degauss' },
-      { command: 'retroLooks.install', title: 'Retro: Install Fonts' },
-      { command: 'retroLooks.openFonts', title: 'Retro: Open Bundled Fonts Folder' },
+      { command: 'degauss.choose', title: 'Degauss: Choose Look…' },
+      ...looks.map((l) => ({ command: `degauss.apply.${l.id}`, title: `Degauss: ${l.name}` })),
+      { command: 'degauss.setColor', title: 'Degauss: Set Phosphor Color…' },
+      { command: 'degauss.off', title: 'Degauss: Off (restore previous look)' },
+      { command: 'degauss.degauss', title: 'Degauss: Degauss!' },
+      { command: 'degauss.install', title: 'Degauss: Install Fonts' },
+      { command: 'degauss.openFonts', title: 'Degauss: Open Bundled Fonts Folder' },
     ],
     menus: {
-      // The extension sets retroLooks.fontsInstalled (Windows only; elsewhere the command stays visible).
-      commandPalette: [{ command: 'retroLooks.install', when: '!retroLooks.fontsInstalled' }],
+      // The extension sets degauss.fontsInstalled (Windows only; elsewhere the command stays visible).
+      commandPalette: [{ command: 'degauss.install', when: '!degauss.fontsInstalled' }],
     },
     configuration: {
-      title: 'Retro Looks',
+      title: 'Degauss',
       properties: {
-        'retroLooks.pixelPerfectFontSize': {
+        'degauss.pixelPerfectFontSize': {
           type: 'boolean',
           default: true,
           markdownDescription: 'Adjust the font size of pixel fonts to your display scaling so every font pixel covers a whole number of screen pixels. This keeps them sharp; turn it off to use each look\'s nominal size.',
         },
-        'retroLooks.phosphorColors': {
+        'degauss.phosphorColors': {
           type: 'object',
           default: {},
           additionalProperties: { type: 'string' },
           markdownDescription: 'The phosphor color of each monochrome look in VS Code, by look ID ('
             + looks.filter((l) => l.monochrome).map((l) => `\`${l.id}\``).join(', ')
             + '): a preset (' + Object.keys(PRESETS).map((c) => `\`${c}\``).join(', ')
-            + ') or `#RRGGBB`. Easiest to set with **Retro: Set Phosphor Color…**. Windows Terminal is not affected.',
+            + ') or `#RRGGBB`. Easiest to set with **Degauss: Set Phosphor Color…**. Windows Terminal is not affected.',
         },
       },
     },
@@ -190,7 +190,7 @@ function buildVscode(allLooks, fonts) {
 
 function terminalFragment(looks, fonts) {
   return {
-    $help: 'Retro Looks for Windows Terminal — https://github.com/zmbq/vscode-retro',
+    $help: 'Degauss for Windows Terminal — https://github.com/zmbq/degauss',
     schemes: looks.flatMap((l) => l.schemes),
     profiles: looks.map((l) => ({
       guid: l.terminal.guid,
@@ -202,7 +202,7 @@ function terminalFragment(looks, fonts) {
       font: { face: fonts[l.font].family, size: l.terminal.fontSize },
       cursorShape: l.terminal.cursorShape,
       padding: l.terminal.padding,
-      // The looks are opened with the `look` command; Install-RetroLooks -ShowProfiles shows them in the menu.
+      // The looks are opened with the `look` command; Install-Degauss -ShowProfiles shows them in the menu.
       hidden: true,
     })),
   };
@@ -210,22 +210,22 @@ function terminalFragment(looks, fonts) {
 
 function buildPowerShell(looks, fonts) {
   const out = p('dist', 'powershell');
-  const moduleDir = path.join(out, 'RetroLooks');
+  const moduleDir = path.join(out, 'Degauss');
   // Only clear what this step produces: dist/ also holds the packaged VSIX.
   fs.rmSync(out, { recursive: true, force: true });
-  for (const file of ['retro-looks-powershell.zip', 'retro-looks-powershell.zip.sha256']) fs.rmSync(p('dist', file), { force: true });
+  for (const file of ['degauss-powershell.zip', 'degauss-powershell.zip.sha256']) fs.rmSync(p('dist', file), { force: true });
 
   fs.mkdirSync(moduleDir, { recursive: true });
-  fs.copyFileSync(p('powershell', 'RetroLooks', 'RetroLooks.psm1'), path.join(moduleDir, 'RetroLooks.psm1'));
-  const manifest = fs.readFileSync(p('powershell', 'RetroLooks', 'RetroLooks.psd1'), 'utf8');
+  fs.copyFileSync(p('powershell', 'Degauss', 'Degauss.psm1'), path.join(moduleDir, 'Degauss.psm1'));
+  const manifest = fs.readFileSync(p('powershell', 'Degauss', 'Degauss.psd1'), 'utf8');
   const version = manifest.match(/ModuleVersion\s*=\s*'(\d+\.\d+\.\d+)'/)?.[1];
-  if (!version) throw new Error("RetroLooks.psd1 needs a ModuleVersion like '1.2.3'");
-  fs.copyFileSync(p('powershell', 'RetroLooks', 'RetroLooks.psd1'), path.join(moduleDir, 'RetroLooks.psd1'));
+  if (!version) throw new Error("Degauss.psd1 needs a ModuleVersion like '1.2.3'");
+  fs.copyFileSync(p('powershell', 'Degauss', 'Degauss.psd1'), path.join(moduleDir, 'Degauss.psd1'));
   fs.copyFileSync(p('powershell', 'CHANGELOG.md'), path.join(moduleDir, 'CHANGELOG.md'));
   copyFonts(fonts, path.join(moduleDir, 'fonts'));
   fs.writeFileSync(path.join(moduleDir, 'degauss.wav'), degaussWav());
   writeJson(path.join(moduleDir, 'fonts.json'), fontList(fonts));
-  writeJson(path.join(moduleDir, 'retro-looks.json'), terminalFragment(looks, fonts));
+  writeJson(path.join(moduleDir, 'degauss.json'), terminalFragment(looks, fonts));
 
   // For the `look` and `color` commands: the looks, and what the module needs to recolor a tab. The module
   // repeats palette.js's math in PowerShell (the tests check both give the same colors).
@@ -258,14 +258,14 @@ function buildPowerShell(looks, fonts) {
   }
   fs.copyFileSync(p('powershell', 'install.ps1'), path.join(out, 'install.ps1'));
 
-  const zip = p('dist', 'retro-looks-powershell.zip');
+  const zip = p('dist', 'degauss-powershell.zip');
   if (process.platform === 'win32') {
     execFileSync('powershell', ['-NoProfile', '-Command', `Compress-Archive -Path '${out}\\*' -DestinationPath '${zip}' -Force`], { stdio: 'inherit' });
   } else {
     execFileSync('zip', ['-qr', zip, '.'], { cwd: out, stdio: 'inherit' });
   }
   const hash = crypto.createHash('sha256').update(fs.readFileSync(zip)).digest('hex');
-  fs.writeFileSync(zip + '.sha256', `${hash}  retro-looks-powershell.zip\n`);
+  fs.writeFileSync(zip + '.sha256', `${hash}  degauss-powershell.zip\n`);
   return version;
 }
 

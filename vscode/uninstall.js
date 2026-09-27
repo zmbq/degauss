@@ -1,6 +1,6 @@
 // VS Code runs this after the extension is uninstalled ("vscode:uninstall" in package.json), including
 // from the Extensions view, so the fonts don't stay behind. It runs in plain Node, without the VS Code API.
-// The fonts are only removed if no other project (the RetroLooks PowerShell module) still uses them.
+// The fonts are only removed if no other project (the Degauss PowerShell module) still uses them.
 const fs = require('fs');
 const path = require('path');
 const fonts = require('./fonts');

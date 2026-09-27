@@ -22,5 +22,5 @@ jobs:
         working-directory: vscode
       - uses: actions/upload-artifact@v7
         with:
-          name: retro-looks
+          name: degauss
           path: dist/*.*

@@ -1,8 +1,12 @@
-# Changelog: RetroLooks PowerShell module (Windows Terminal)
+# Changelog: Degauss PowerShell module (Windows Terminal)
 
 ## 0.3.0 (in progress)
 
-- **`degauss`** (`Invoke-RetroDegauss`), like the button on a CRT monitor: the relay's *thunk*, the coil's
+- **Renamed from RetroLooks to Degauss.** The module is now `Degauss`, and its commands are
+  `Set-DegaussLook` (`look`), `Set-DegaussColor` (`color`), `Get-DegaussLook`, `Install-Degauss` and
+  `Uninstall-Degauss`. The Windows Terminal profile is called Degauss, and the fonts are installed as
+  `Degauss-*.ttf`.
+- **`degauss`** (`Invoke-Degauss`), like the button on a CRT monitor: the relay's *thunk*, the coil's
   hum, and a second of swirling colors. Like the real thing, it also fixes the colors: the tab is back to
   its own colors afterwards, including ones Windows Terminal threw away. `-Quiet` skips the sound.
 

@@ -1,10 +1,10 @@
-# Retro Looks
+# Degauss
 
-Code on the machines you grew up on. Retro Looks gives VS Code the look of vintage computers: each
+Code on the machines you grew up on. Degauss gives VS Code the look of vintage computers: each
 look sets a period-correct **font**, a matching **color theme** and the right **cursor**, in one step,
 and puts your own setup back when you're done.
 
-![VS Code with the Apple //e look in amber](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/hero.png)
+![VS Code with the Apple //e look in amber](https://raw.githubusercontent.com/zmbq/degauss/main/docs/images/hero.png)
 
 ## The looks
 
@@ -14,64 +14,64 @@ and puts your own setup back when you're done.
 | **IBM 3270**            | IBM 3270                     | A mainframe color terminal with the default ISPF editor highlighting: green text, turquoise comments, red keywords, white strings, blue directives, yellow operators |
 | **IBM 3270 Monochrome** | IBM 3270                     | A 3278-style monochrome terminal: ISPF's colors become normal and intensified text, in the phosphor color of your choice                                             |
 
-![Apple //e in green](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/apple2e-green.png)
+![Apple //e in green](https://raw.githubusercontent.com/zmbq/degauss/main/docs/images/apple2e-green.png)
 
-![IBM 3270 with the ISPF editor colors](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/ibm-3270.png)
+![IBM 3270 with the ISPF editor colors](https://raw.githubusercontent.com/zmbq/degauss/main/docs/images/ibm-3270.png)
 
-![IBM 3270 Monochrome in green](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/ibm-3270-mono.png)
+![IBM 3270 Monochrome in green](https://raw.githubusercontent.com/zmbq/degauss/main/docs/images/ibm-3270-mono.png)
 
 ## Getting started
 
 1. Install the extension. On Windows, it offers to install its fonts right away (for your user only,
    no admin needed). Click **Install**, then quit and restart VS Code: VS Code only sees new fonts after a
    full restart, and reloading the window isn't enough.
-2. Open the Command Palette (`Ctrl+Shift+P`) and run **Retro: Choose Look…**.
+2. Open the Command Palette (`Ctrl+Shift+P`) and run **Degauss: Choose Look…**.
 3. For a monochrome look, pick a phosphor color.
 
-![The Retro: Choose Look list](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/choose-look.png)
+![The Degauss: Choose Look list](https://raw.githubusercontent.com/zmbq/degauss/main/docs/images/choose-look.png)
 
-**Retro: Off** puts your own theme, fonts and settings back, exactly as they were.
+**Degauss: Off** puts your own theme, fonts and settings back, exactly as they were.
 
 ## Phosphor colors
 
 Monochrome monitors came in different colors, and some 80-column cards even let you pick one with DIP
 switches. Monochrome looks ask for their color when you choose them: **green**, **amber**, **white**,
 **cyan**, **yellow**, or **Custom…** for any `#RRGGBB`. Change it any time with
-**Retro: Set Phosphor Color…**. The change is instant.
+**Degauss: Set Phosphor Color…**. The change is instant.
 
-![Choosing a phosphor color](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/phosphor-colors.png)
+![Choosing a phosphor color](https://raw.githubusercontent.com/zmbq/degauss/main/docs/images/phosphor-colors.png)
 
 Each look remembers its own color, so your Apple //e can be amber while your 3270 stays green. The
-colors are stored in the `retroLooks.phosphorColors` setting, e.g. `{ "apple2e": "#40E0FF" }`, if you'd
+colors are stored in the `degauss.phosphorColors` setting, e.g. `{ "apple2e": "#40E0FF" }`, if you'd
 rather edit them by hand. Very dark colors are brightened so the text stays readable.
 
 ## Sharp pixel fonts
 
-Pixel fonts blur when a font pixel doesn't land on whole screen pixels. On Windows, Retro Looks reads
+Pixel fonts blur when a font pixel doesn't land on whole screen pixels. On Windows, Degauss reads
 your display scaling (and VS Code's zoom level) and picks the sharp font size closest to the look's
 size, with a line height to match: for example 21.333 with 28-pixel lines at 150% scaling. Turn this
-off with `retroLooks.pixelPerfectFontSize`.
+off with `degauss.pixelPerfectFontSize`.
 
 ## Uninstalling
 
-**Run Retro: Off before you uninstall.** It restores your theme, fonts and settings. The extension can't
+**Run Degauss: Off before you uninstall.** It restores your theme, fonts and settings. The extension can't
 do that once it's uninstalled: VS Code would fall back to its default theme and leave the retro font
 size, line height and cursor in your settings.
 
 Uninstalling the extension removes its fonts too (the next time VS Code starts). Forgot to turn it off?
-Reinstall the extension and run **Retro: Off**: it still remembers your original settings.
+Reinstall the extension and run **Degauss: Off**: it still remembers your original settings.
 
 ## Commands
 
-| Command                               | What it does                                                  |
-| ------------------------------------- | ------------------------------------------------------------- |
-| Retro: Choose Look…                  | Pick a look (and a color, for monochrome looks)               |
-| Retro: Apple //e, Retro: IBM 3270, … | Apply a look directly, in its remembered color                |
-| Retro: Set Phosphor Color…           | Change the color of the active monochrome look                |
-| Retro: Off                            | Put your own theme, fonts and settings back                   |
-| Retro: Degauss                        | *Thunk*, hum, and a second of wobbling, swirling colors       |
-| Retro: Install Fonts                  | Install the fonts (Windows; only shown while they're missing) |
-| Retro: Open Bundled Fonts Folder      | Open the fonts, to install them by hand on Mac or Linux       |
+| Command                                  | What it does                                                  |
+| ---------------------------------------- | ------------------------------------------------------------- |
+| Degauss: Choose Look…                    | Pick a look (and a color, for monochrome looks)               |
+| Degauss: Apple //e, Degauss: IBM 3270, … | Apply a look directly, in its remembered color                |
+| Degauss: Set Phosphor Color…             | Change the color of the active monochrome look                |
+| Degauss: Off                             | Put your own theme, fonts and settings back                   |
+| Degauss: Degauss!                        | *Thunk*, hum, and a second of wobbling, swirling colors       |
+| Degauss: Install Fonts                   | Install the fonts (Windows; only shown while they're missing) |
+| Degauss: Open Bundled Fonts Folder       | Open the fonts, to install them by hand on Mac or Linux       |
 
 The themes are also available on their own in the normal theme picker (`Ctrl+K Ctrl+T`), and you can use
 the fonts with any theme.
@@ -89,7 +89,7 @@ Ricardo Bánffy and contributors ([3270font](https://github.com/rbanffy/3270font
 IBM's *ISPF Edit and Edit Macros* manual.
 
 Want another machine, like a Commodore 64 or a classic Mac?
-[Contributions are welcome](https://github.com/zmbq/vscode-retro/blob/main/CONTRIBUTING.md).
+[Contributions are welcome](https://github.com/zmbq/degauss/blob/main/CONTRIBUTING.md).
 
-Retro Looks is a fan project, not affiliated with or endorsed by Apple, IBM or any other company whose
+Degauss is a fan project, not affiliated with or endorsed by Apple, IBM or any other company whose
 products it pays tribute to; their names are used only to describe the look.

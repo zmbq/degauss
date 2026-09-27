@@ -1,8 +1,10 @@
-# Changelog: Retro Looks for VS Code
+# Changelog: Degauss for VS Code
 
 ## 0.3.0 (in progress)
 
-- **Retro: Degauss**, like the button on a CRT monitor: the relay's *thunk*, the coil's hum, and a second
+- **Renamed from Retro Looks to Degauss.** The extension is now `zmbq.degauss`; commands are
+  **Degauss: …** and settings `degauss.*` (formerly `retroLooks.*`). Fonts are installed as `Degauss-*.ttf`.
+- **Degauss: Degauss!**, like the button on a CRT monitor: the relay's *thunk*, the coil's hum, and a second
   of wobbling, swirling colors in the editor.
 
 ## 0.2.1

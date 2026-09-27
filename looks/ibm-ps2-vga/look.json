@@ -8,7 +8,7 @@
   "description": "IBM PS/2 VGA text mode: the classic black DOS prompt. Windows Terminal only for now.",
   "font": "pxplus-ibm-vga-9x16",
   "terminal": {
-    "guid": "{66de10c3-4bbc-48d0-bca1-0aa15bcd1683}",
+    "guid": "{89547af2-d446-4885-ac42-7971cc512d96}",
     "fontSize": 12,
     "cursorShape": "underscore",
     "padding": "8",
