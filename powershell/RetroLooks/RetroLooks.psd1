@@ -1,7 +1,7 @@
 @{
     RootModule           = 'RetroLooks.psm1'
-    # Filled in by tools/build.mjs from the root package.json.
-    ModuleVersion        = '0.0.0'
+    # The module's own version; bump it (and powershell/CHANGELOG.md) when the module changes.
+    ModuleVersion        = '0.2.1'
     GUID                 = '7f4fdfc1-13a0-4917-bb50-9f7ea44c6989'
     Author               = 'Itay Zandbank'
     Copyright            = '(c) Itay Zandbank. MIT License; bundled fonts keep their own licenses.'
@@ -17,6 +17,7 @@
             Tags       = @('retro', 'vintage', 'windows-terminal', 'terminal', 'font', 'theme', 'apple', 'ibm', '3270', 'vga')
             LicenseUri = 'https://github.com/zmbq/vscode-retro/blob/main/LICENSE'
             ProjectUri = 'https://github.com/zmbq/vscode-retro'
+            ReleaseNotes = 'https://github.com/zmbq/vscode-retro/blob/main/powershell/CHANGELOG.md'
         }
     }
 }

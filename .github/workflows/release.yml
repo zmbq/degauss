@@ -1,6 +1,7 @@
 name: Release
 
-# Push a tag like v0.2.0 (matching the root package.json "version") to publish a release.
+# Push a tag like v0.2.1 (matching the root package.json "version", the release number) to publish a release.
+# Every release contains both products, each with its own version; the stores skip versions they already have.
 on:
   push:
     tags: ['v*']
@@ -24,7 +25,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Check tag matches extension version
+      - name: Check tag matches the release number
         run: |
           version=$(node -p "require('./package.json').version")
           if [ "v$version" != "$GITHUB_REF_NAME" ]; then
@@ -39,13 +40,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --title "Retro Looks $GITHUB_REF_NAME" --generate-notes \
+          extension=$(node -p "require('./vscode/package.json').version")
+          module=$(grep -oP "ModuleVersion\s*=\s*'\K[0-9.]+" powershell/RetroLooks/RetroLooks.psd1)
+          notes="VS Code extension **$extension** ([changelog](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/vscode/CHANGELOG.md)), PowerShell module **$module** ([changelog](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/powershell/CHANGELOG.md))."
+          gh release create "$GITHUB_REF_NAME" --title "Retro Looks $GITHUB_REF_NAME" --notes "$notes" --generate-notes \
             dist/*.vsix dist/retro-looks-powershell.zip dist/retro-looks-powershell.zip.sha256 powershell/install.ps1
 
       - name: Publish to VS Code Marketplace
         if: env.VSCE_PAT != ''
-        run: npx --yes @vscode/vsce@3 publish --packagePath dist/*.vsix -p "$VSCE_PAT"
+        run: npx --yes @vscode/vsce@3 publish --skip-duplicate --packagePath dist/*.vsix -p "$VSCE_PAT"
 
       - name: Publish to Open VSX
         if: env.OVSX_PAT != ''
-        run: npx --yes ovsx publish dist/*.vsix -p "$OVSX_PAT"
+        run: npx --yes ovsx publish --skip-duplicate dist/*.vsix -p "$OVSX_PAT"

@@ -15,7 +15,7 @@ matching color schemes. People will often ask you to **add a new look** ("add a 
 - `vscode/palette.js`: the color presets and the palette math, shared by the build and the extension
   (which recolors monochrome looks at runtime with the user's chosen color).
 - `vscode/`: **project 1**, the VS Code extension. `extension.js` is hand-written; `package.json`'s
-  `version` and `contributes` and all of `vscode/generated/` are produced by the build. Never edit those by hand.
+  `contributes` and all of `vscode/generated/` are produced by the build. Never edit those by hand.
   It installs fonts only; Windows Terminal is not its job.
 - `powershell/`: **project 2**, the RetroLooks PowerShell module for Windows Terminal
   (`RetroLooks/RetroLooks.psm1`, `.psd1`) and `install.ps1`, which installs the module and runs it.
@@ -26,7 +26,12 @@ matching color schemes. People will often ask you to **add a new look** ("add a 
   (`vscode/fonts.js`, `RetroLooks.psm1`); uninstalling removes its own marker and removes the fonts only if
   no marker is left. Keep it that way, and give any new installer its own marker. The extension's
   `vscode/uninstall.js` (VS Code's `vscode:uninstall` hook) does the same when it's removed from the Extensions view.
-- The product version lives in the root `package.json`; the build copies it to both projects.
+- **Versions:** each product has its own. The extension's is `version` in `vscode/package.json`, the
+  module's is `ModuleVersion` in `powershell/RetroLooks/RetroLooks.psd1`, each with its own changelog
+  (`vscode/CHANGELOG.md`, `powershell/CHANGELOG.md`). The root `package.json` `version` is the release
+  number, the Git tag (`v1.2.3`); every release contains both products, and the stores skip versions they
+  already have. When a product changes, bump its version and add a changelog entry; for a release, bump
+  the release number and add a row to the table in the root `CHANGELOG.md`.
 - The PowerShell module repeats `vscode/palette.js`'s color math (`Get-PhosphorPalette` and friends in
   `RetroLooks.psm1`) to recolor tabs at runtime. Change both together; the PowerShell tests compare them
   color by color. Watch PowerShell's overload resolution: `[math]::Max(0, $x)` picks the integer overload.
@@ -89,7 +94,7 @@ That affects every monochrome look and every color, so check several.
 - Keep `FONT_FILE_PREFIX` (build.mjs) and `$script:FontFilePrefix` (RetroLooks.psm1) in sync; the module
   uses the prefix to find and uninstall fonts, including ones from older versions.
 - Don't commit generated files (`vscode/generated/`, `dist/`, the copied files listed in `.gitignore`).
-- Bump the root `package.json` `version` and add a `CHANGELOG.md` entry for anything user-visible.
+- For anything user-visible, bump the changed product's version and add an entry to its changelog.
 
 ## If the user just wants a personal tweak
 

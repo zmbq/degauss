@@ -1,9 +1,10 @@
 // Builds both projects from looks/ and fonts/:
 //   vscode/generated/...                  themes, templates, looks.json, fonts (packaged into the VSIX)
-//   vscode/package.json                   version and "contributes" section (themes + commands) are rewritten
+//   vscode/package.json                   "contributes" section (themes + commands) is rewritten
 //   dist/powershell/ + dist/retro-looks-powershell.zip (+ .sha256)
 //                                         the RetroLooks PowerShell module (Windows Terminal) and its installer
-// The product version lives in the root package.json. Usage: node tools/build.mjs
+// Each product has its own version: vscode/package.json and powershell/RetroLooks/RetroLooks.psd1. The root
+// package.json's version is the release number (the Git tag), shared by both. Usage: node tools/build.mjs
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -105,7 +106,7 @@ function thirdPartyNotices(fonts) {
 
 // ---------- VS Code extension ----------
 
-function buildVscode(allLooks, fonts, version) {
+function buildVscode(allLooks, fonts) {
   // Every font is bundled (the extension installs all of them), but only looks with a "vscode" section
   // get a theme and a command.
   const looks = allLooks.filter((l) => l.vscode);
@@ -137,14 +138,13 @@ function buildVscode(allLooks, fonts, version) {
     };
   }));
 
-  // vsce needs these next to package.json.
-  // vscode/README.md is the extension's own page (Marketplace, Extensions view); the rest live at the repo root.
-  for (const file of ['CHANGELOG.md', 'LICENSE']) fs.copyFileSync(p(file), path.join(ext, file));
+  // vsce needs these next to package.json. vscode/README.md and vscode/CHANGELOG.md are the extension's own;
+  // the license lives at the repo root.
+  fs.copyFileSync(p('LICENSE'), path.join(ext, 'LICENSE'));
   fs.writeFileSync(path.join(ext, 'THIRD-PARTY-NOTICES.md'), thirdPartyNotices(fonts));
 
   const pkgFile = path.join(ext, 'package.json');
   const pkg = readJson(pkgFile);
-  pkg.version = version;
   pkg.contributes = {
     themes: looks.map((l) => ({ label: l.name, uiTheme: 'vs-dark', path: `./generated/themes/${l.id}.json` })),
     commands: [
@@ -180,6 +180,7 @@ function buildVscode(allLooks, fonts, version) {
     },
   };
   writeJson(pkgFile, pkg);
+  return pkg.version;
 }
 
 // ---------- PowerShell module (Windows Terminal) ----------
@@ -204,7 +205,7 @@ function terminalFragment(looks, fonts) {
   };
 }
 
-function buildPowerShell(looks, fonts, version) {
+function buildPowerShell(looks, fonts) {
   const out = p('dist', 'powershell');
   const moduleDir = path.join(out, 'RetroLooks');
   // Only clear what this step produces: dist/ also holds the packaged VSIX.
@@ -214,9 +215,10 @@ function buildPowerShell(looks, fonts, version) {
   fs.mkdirSync(moduleDir, { recursive: true });
   fs.copyFileSync(p('powershell', 'RetroLooks', 'RetroLooks.psm1'), path.join(moduleDir, 'RetroLooks.psm1'));
   const manifest = fs.readFileSync(p('powershell', 'RetroLooks', 'RetroLooks.psd1'), 'utf8');
-  const placeholder = /(ModuleVersion\s*=\s*)'0\.0\.0'/;
-  if (!placeholder.test(manifest)) throw new Error("RetroLooks.psd1 must say ModuleVersion = '0.0.0' (the build fills it in)");
-  fs.writeFileSync(path.join(moduleDir, 'RetroLooks.psd1'), manifest.replace(placeholder, `$1'${version}'`));
+  const version = manifest.match(/ModuleVersion\s*=\s*'(\d+\.\d+\.\d+)'/)?.[1];
+  if (!version) throw new Error("RetroLooks.psd1 needs a ModuleVersion like '1.2.3'");
+  fs.copyFileSync(p('powershell', 'RetroLooks', 'RetroLooks.psd1'), path.join(moduleDir, 'RetroLooks.psd1'));
+  fs.copyFileSync(p('powershell', 'CHANGELOG.md'), path.join(moduleDir, 'CHANGELOG.md'));
   copyFonts(fonts, path.join(moduleDir, 'fonts'));
   writeJson(path.join(moduleDir, 'fonts.json'), fontList(fonts));
   writeJson(path.join(moduleDir, 'retro-looks.json'), terminalFragment(looks, fonts));
@@ -260,13 +262,15 @@ function buildPowerShell(looks, fonts, version) {
   }
   const hash = crypto.createHash('sha256').update(fs.readFileSync(zip)).digest('hex');
   fs.writeFileSync(zip + '.sha256', `${hash}  retro-looks-powershell.zip\n`);
+  return version;
 }
 
-const version = readJson(p('package.json')).version;
-if (!/^\d+\.\d+\.\d+$/.test(version ?? '')) throw new Error('package.json needs a "version" like 1.2.3');
+const release = readJson(p('package.json')).version;
+if (!/^\d+\.\d+\.\d+$/.test(release ?? '')) throw new Error('package.json needs a "version" (the release number) like 1.2.3');
 const fonts = loadFonts();
 const looks = loadLooks(fonts);
-buildVscode(looks, fonts, version);
-buildPowerShell(looks, fonts, version);
+const extensionVersion = buildVscode(looks, fonts);
+const moduleVersion = buildPowerShell(looks, fonts);
 const describe = (l) => (l.vscode ? l.name : `${l.name} [Terminal only]`);
-console.log(`Built ${looks.length} looks (${looks.map(describe).join(', ')}), ${Object.keys(fonts).length} fonts, version ${version}.`);
+console.log(`Built ${looks.length} looks (${looks.map(describe).join(', ')}), ${Object.keys(fonts).length} fonts.`);
+console.log(`Release ${release}: VS Code extension ${extensionVersion}, PowerShell module ${moduleVersion}.`);
