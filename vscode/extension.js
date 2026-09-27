@@ -272,17 +272,6 @@ async function choose(context, looks) {
   await applyLook(context, picked.look);
 }
 
-// Version 0.1 had separate Apple //e Green and Amber looks; carry an active one over to Apple //e.
-async function migrateOldLooks(context, looks) {
-  const apple = looks.find((l) => l.id === 'apple2e');
-  const oldColor = { 'Apple //e Green': 'green', 'Apple //e Amber': 'amber' }[
-    vscode.workspace.getConfiguration('workbench').get('colorTheme')
-  ];
-  if (!apple || !oldColor || !context.globalState.get(SAVED_KEY)) return;
-  await saveColorChoice(apple, oldColor);
-  await applyLook(context, apple);
-}
-
 // ---------- Windows font install ----------
 
 // The fonts live in fonts.js, shared with the uninstall hook (uninstall.js), which removes them when the
@@ -396,13 +385,10 @@ function activate(context) {
   }));
 
   // Startup checks run in the background; the tests wait for them through _internal.startup().
-  startup = Promise.all([
-    migrateOldLooks(context, looks).catch((err) => console.error('Degauss: migration failed', err)),
-    adoptInstalledFonts()
-      .then(updateFontsContext)
-      .then(() => remindToInstall(context))
-      .catch((err) => console.error('Degauss: font check failed', err)),
-  ]);
+  startup = adoptInstalledFonts()
+    .then(updateFontsContext)
+    .then(() => remindToInstall(context))
+    .catch((err) => console.error('Degauss: font check failed', err));
 }
 
 let startup = Promise.resolve();

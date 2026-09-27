@@ -1,4 +1,4 @@
-// Drives the extension through a fake VS Code: choosing looks and colors, Off, and migration.
+// Drives the extension through a fake VS Code: choosing looks and colors, and Off.
 // Requires a build (`npm test` runs the build first).
 const test = require('node:test');
 const assert = require('node:assert');
@@ -90,15 +90,4 @@ test('Off restores the user\'s settings but remembers the chosen colors', async 
     assert.strictEqual(s[key], undefined, `${key} removed`);
   }
   assert.deepStrictEqual(s['degauss.phosphorColors'], { apple2e: 'amber' });
-});
-
-test('an active v0.1 "Apple //e Amber" look is migrated to Apple //e in amber', async () => {
-  const globalState = new Map([['degauss.saved', { 'workbench.colorTheme': NIGHT_OWL }]]);
-  const fake = createFakeVscode();
-  fake.settings = { 'workbench.colorTheme': 'Apple //e Amber' };
-  fake.activate(globalState);
-  await fake.settle();
-  assert.strictEqual(fake.settings['workbench.colorTheme'], 'Apple //e');
-  assert.deepStrictEqual(fake.settings['degauss.phosphorColors'], { apple2e: 'amber' });
-  assert(fake.settings['workbench.colorCustomizations']['[Apple //e]']);
 });
