@@ -92,3 +92,32 @@ Generated files (`extension/generated`, `dist`) are not committed.
 
 Please stay faithful to the real machine: its fonts, its colors, what its screen actually did.
 If you're not sure, say so in the PR, and someone who used one will know.
+
+## Roadmap and where help is wanted
+
+Retro Looks is Windows-first. Fonts are installed for the whole system, so once they're installed,
+VS Code and every terminal can use them. What differs per terminal is the color schemes and profiles.
+
+**Next (v0.2.0): macOS and Linux fonts and VS Code**
+- The extension installs, detects and uninstalls the fonts on macOS (`~/Library/Fonts`) and Linux
+  (`~/.local/share/fonts` + `fc-cache`), with the same startup reminder as on Windows.
+- An `install.sh` (`curl … | sh`) installs just the fonts, for people who don't use VS Code.
+
+**Later: terminal color schemes beyond Windows Terminal (help wanted!)**
+
+Each terminal is its own small, self-contained piece of work. The plan is for the build to have one
+small *exporter* per terminal that turns the looks' color schemes into that terminal's format, so
+you can add support for the terminal you use without touching anything else, and test it yourself.
+
+| Terminal | Platform | Approach |
+|---|---|---|
+| iTerm2 | macOS | Dynamic Profiles (a JSON file in a folder, like Windows Terminal fragments); can be installed automatically |
+| Terminal.app | macOS | `.terminal` profile files, imported by double-clicking |
+| Ghostty, WezTerm, kitty, Alacritty | macOS, Linux | Theme files, plus one documented config line to use them |
+| GNOME Terminal | Linux | Profiles live in dconf, so this needs care |
+| Konsole | Linux | `.profile` and `.colorscheme` files |
+
+If you'd like to take one on, open an issue first so we can agree on the details.
+
+**Anytime: more machines.** Commodore 64, classic Mac, CP/M machines, VT100, Amiga, BBC Micro, and a
+VS Code version of the IBM PS/2 look that does the machine justice.

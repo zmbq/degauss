@@ -24,7 +24,7 @@ Install **Retro Looks** from the Marketplace (or Open VSX), then open the Comman
   **Retro: Install Fonts and Windows Terminal Profiles**, which installs the fonts plus the
   Windows Terminal profiles.
 - On macOS and Linux, run **Retro: Open Bundled Fonts Folder** and install the fonts with your
-  system's font installer. Automatic installation there is on the to-do list.
+  system's font installer. Automatic installation there is next on the [roadmap](CONTRIBUTING.md#roadmap-and-where-help-is-wanted).
 - Works in Remote SSH, WSL and container windows: the extension runs on your local machine.
 
 The themes are also available on their own through the normal theme picker (`Ctrl+K Ctrl+T`), and
@@ -51,6 +51,10 @@ To uninstall:
 ```powershell
 & ([scriptblock]::Create((irm https://github.com/zmbq/vscode-retro/releases/latest/download/install.ps1))) -Uninstall
 ```
+
+On macOS and Linux, install the fonts (see above) and pick them in your terminal's settings. Retro
+color schemes for iTerm2, Ghostty, WezTerm, kitty, Alacritty and others are on the
+[roadmap](CONTRIBUTING.md#roadmap-and-where-help-is-wanted), and contributions are welcome.
 
 ## Tweaking colors
 
