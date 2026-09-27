@@ -41,7 +41,8 @@ $paths = @{
 $fragmentFile = Join-Path $paths.Fragment 'retro-looks.json'
 $prefsFile = Join-Path $paths.Data 'terminal.json'
 New-Item -ItemType Directory -Force $sandbox | Out-Null
-$savedEnv = @{ WT_SESSION = $env:WT_SESSION; WT_PROFILE_ID = $env:WT_PROFILE_ID; TERM_PROGRAM = $env:TERM_PROGRAM }
+$savedEnv = @{ WT_SESSION = $env:WT_SESSION; WT_PROFILE_ID = $env:WT_PROFILE_ID; TERM_PROGRAM = $env:TERM_PROGRAM; RETRO_LOOK = $env:RETRO_LOOK }
+$env:RETRO_LOOK = $null
 
 try {
     Import-Module (Join-Path $package 'RetroLooks\RetroLooks.psd1') -Force
@@ -67,6 +68,9 @@ try {
     $clearWritten = { & $module { $script:Written = @() } }
     $wtCalls = { & $module { $script:WtCalls } }
     $clearWt = { & $module { $script:WtCalls = @() } }
+    $retroGuid = & $module { $script:RetroProfileGuid }
+    $lookProfiles = { param($f) @($f.profiles | Where-Object { $_.guid -ne $retroGuid }) }
+    $retroProfile = { param($f) $f.profiles | Where-Object { $_.guid -eq $retroGuid } }
 
     Write-Host '-- Install-RetroLooks'
     Install-RetroLooks 6>$null | Out-Null
@@ -79,7 +83,11 @@ try {
     $fragment = Get-Content $fragmentFile -Raw | ConvertFrom-Json
     $schemes = @($fragment.schemes | ForEach-Object { $_.name })
     $dpi = & $module { Get-DisplayDpi }
-    foreach ($terminalProfile in $fragment.profiles) {
+    $retro = & $retroProfile $fragment
+    Check ($retro -and $retro.name -eq 'Retro Looks' -and $retro.hidden -eq $false) 'one visible Retro Looks profile'
+    Check ($retro.commandline -match 'Initialize-RetroTab -Look apple2e$' -and $retro.font.face -eq 'PR Number 3') 'it opens the default look (Apple //e)'
+    Check ((& $lookProfiles $fragment).Count -eq $looks.Count) 'plus a profile per look'
+    foreach ($terminalProfile in & $lookProfiles $fragment) {
         Check ($terminalProfile.commandline -match '^(pwsh|powershell)\.exe -NoLogo -NoExit -Command Initialize-RetroTab$') "$($terminalProfile.name): runs Initialize-RetroTab"
         Check ($terminalProfile.hidden -eq $true) "$($terminalProfile.name): hidden"
         Check ($schemes -contains $terminalProfile.colorScheme) "$($terminalProfile.name): color scheme '$($terminalProfile.colorScheme)' exists"
@@ -93,7 +101,7 @@ try {
     $fragment = Get-Content $fragmentFile -Raw | ConvertFrom-Json
     Check (@($fragment.profiles | Where-Object hidden).Count -eq 0) '-ShowProfiles shows the profiles'
     $source = Get-Content (Join-Path $package 'RetroLooks\retro-looks.json') -Raw | ConvertFrom-Json
-    Check ((@($fragment.profiles | ForEach-Object { $_.font.size }) -join ',') -eq (@($source.profiles | ForEach-Object { $_.font.size }) -join ',')) '-KeepFontSizes keeps nominal sizes'
+    Check ((@(& $lookProfiles $fragment | ForEach-Object { $_.font.size }) -join ',') -eq (@($source.profiles | ForEach-Object { $_.font.size }) -join ',')) '-KeepFontSizes keeps nominal sizes'
 
     Write-Host '-- colors match the VS Code extension (vscode/palette.js)'
     $diffs = 0; $count = 0
@@ -164,7 +172,8 @@ try {
     Check ((& $written) -eq ((& $module { $script:ResetSequence }) + $cyan)) 'color alone goes back to the saved default'
     color -SetAsDefault
     Check (-not (Get-Content $prefsFile -Raw | ConvertFrom-Json).colors.apple2e) 'color -SetAsDefault alone forgets the saved color'
-    $env:WT_PROFILE_ID = $null
+    Check ($env:RETRO_LOOK -eq 'apple2e') 'the tab remembers its look'
+    $env:WT_PROFILE_ID = $null; $env:RETRO_LOOK = $null
     Throws { color amber -SetAsDefault } 'Retro Looks tab' '-SetAsDefault outside a Retro Looks tab is refused'
     & $clearWritten
     color amber
@@ -186,13 +195,33 @@ try {
     Initialize-RetroTab
     $monoAmber = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'intensity' (Resolve-RetroColor $c)) } 'amber'
     Check ((& $written) -eq $monoAmber -and -not (Test-Path $pendingFile)) 'the new tab applies it and clears the hand-over'
+    $env:WT_PROFILE_ID = $null; $env:RETRO_LOOK = $null
     & $clearWt
     look -Off -KeepTab
     Check ((@(& $wtCalls)[0] -join ' ') -eq "-w 0 nt -d $sandbox") 'look -Off opens a normal tab'
     & $clearWt
-    look ps2 -SetAsDefault -KeepTab 6>$null
+    $message = look ps2 -SetAsDefault -KeepTab 6>&1 | Out-String
+    Check ((@(& $wtCalls)[0] -join ' ') -match [regex]::Escape($lookById['ibm-ps2-vga'].guid)) 'look -SetAsDefault also switches to the look'
+    Check ($message -match 'Default look: IBM PS/2 VGA' -and $message -match 'restart Windows Terminal') 'and says the Retro Looks profile needs a Terminal restart'
+    $fragment = Get-Content $fragmentFile -Raw | ConvertFrom-Json
+    $retro = & $retroProfile $fragment
+    Check ($retro.commandline -match '-Look ibm-ps2-vga$' -and $retro.font.face -eq 'PxPlus IBM VGA 9x16' -and $retro.guid -eq $retroGuid) 'the Retro Looks profile now copies the new default, same GUID'
+    Check (@($fragment.profiles | Where-Object hidden).Count -eq 0) 'Install-RetroLooks -ShowProfiles is remembered when the fragment is rewritten'
+    $message = look ps2 -Color amber -SetAsDefault -KeepTab 6>&1 | Out-String
+    Check ($message -match 'Default look: IBM PS/2 VGA \(amber\)' -and $message -notmatch 'restart') 'a new default color needs no restart'
     look -KeepTab
-    Check ((@(& $wtCalls)[1] -join ' ') -match [regex]::Escape($lookById['ibm-ps2-vga'].guid)) 'look alone opens the default look'
+    Check ((@(& $wtCalls)[2] -join ' ') -match [regex]::Escape($lookById['ibm-ps2-vga'].guid)) 'look alone opens the default look'
+
+    Write-Host '-- the Retro Looks profile'
+    & $clearWritten
+    $message = Initialize-RetroTab -Look apple2e 6>&1 | Out-String
+    Check ($message -match 'default look is now IBM PS/2 VGA' -and $message -match 'Apple //e') 'a tab from an outdated Retro Looks profile says a Terminal restart is pending'
+    Check ($env:RETRO_LOOK -eq 'apple2e') '... and still knows it shows Apple //e'
+    $message = Initialize-RetroTab -Look ibm-ps2-vga 6>&1 | Out-String
+    Check (-not $message.Trim()) 'an up-to-date Retro Looks tab says nothing'
+    $vgaAmber = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'luminance' (Resolve-RetroColor $c)) } 'amber'
+    Check ((& $written) -like "*$vgaAmber") '... and opens in the default color'
+    $env:RETRO_LOOK = $null
     Check (@(Get-RetroLook | Where-Object Default).Name -eq 'IBM PS/2 VGA') 'Get-RetroLook shows the default'
     Check (@(Get-RetroLook).Count -eq $looks.Count) 'Get-RetroLook lists every look'
     Throws { look nosuchlook -KeepTab } 'apple.*3270' 'unknown looks list the valid names'

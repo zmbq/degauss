@@ -49,7 +49,7 @@ irm https://github.com/zmbq/vscode-retro/releases/latest/download/install.ps1 | 
 
 It installs the module for both PowerShell 7 and Windows PowerShell, then runs `Install-RetroLooks`,
 which installs the fonts and adds the looks to Windows Terminal. Close all Windows Terminal windows and
-reopen it. Then, in any PowerShell tab:
+reopen it. Then pick **Retro Looks** from Terminal's profile menu, or, in any PowerShell tab:
 
 ```powershell
 look apple                 # this tab becomes an Apple //e tab (same folder, new session)
@@ -60,7 +60,8 @@ color cyan                 # recolor this tab only: green, amber, white, cyan, y
 color 0A                   # DOS codes work too: 0A green, 0E yellow, 1F white on blue
 color                      # back to the tab's default colors
 color amber -SetAsDefault  # new tabs of this look open in amber
-look ps2 -SetAsDefault     # what `look` alone opens
+look apple -Color amber -SetAsDefault   # your default look: switches now, and is what `look` alone
+                                        # and the Retro Looks profile open
 Get-RetroLook              # list the looks
 ```
 
@@ -69,8 +70,14 @@ tab because only a Windows Terminal profile can set a tab's font: it opens one i
 closes the old tab (its scrollback doesn't come along; `-KeepTab` keeps it). In VS Code's terminal, `look`
 just points you to the extension, and `color` works for that session.
 
-The looks don't clutter Terminal's profile menu; `Install-RetroLooks -ShowProfiles` puts them there if you
-prefer clicking. Pixel fonts are sized for your display scaling so they stay sharp (`-KeepFontSizes` skips
+**Want Terminal to start in your retro look?** Terminal's menu gets one entry, **Retro Looks**, which
+opens your default look. Choose it under Settings → Startup → Default profile. It keeps working when you
+change your default look later: its ID never changes. (Terminal only re-reads its profiles when it
+starts, so after a new default look, restart Terminal; a Retro Looks tab reminds you if you forget.
+Color changes apply right away.) The module never changes Terminal's settings itself.
+
+The individual looks don't clutter the menu; `Install-RetroLooks -ShowProfiles` adds them if you prefer
+clicking. Pixel fonts are sized for your display scaling so they stay sharp (`-KeepFontSizes` skips
 that). Nothing needs admin rights, and your `settings.json` isn't touched: the looks are added as a
 [Terminal fragment](https://learn.microsoft.com/windows/terminal/json-fragment-extensions).
 

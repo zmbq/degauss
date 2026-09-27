@@ -9,9 +9,10 @@
   intensified text, in any phosphor color.
 - **Windows Terminal: `look` and `color`.** `Set-RetroLook` (alias `look`) turns the current tab into a
   retro look (a new tab in the same folder), `Set-RetroColor` (alias `color`) recolors just this tab, with
-  presets, `#RRGGBB` or DOS codes like `0A`. `-SetAsDefault` remembers either. The looks' profiles are now
-  hidden from Terminal's menu (`Install-RetroLooks -ShowProfiles` shows them), and there's a color scheme
-  for every preset color of every monochrome look.
+  presets, `#RRGGBB` or DOS codes like `0A`. `-SetAsDefault` remembers either. Terminal's menu gets a
+  single **Retro Looks** profile that opens your default look, so you can make it Terminal's default
+  profile; the per-look profiles are hidden (`Install-RetroLooks -ShowProfiles` shows them). There's also a
+  color scheme for every preset color of every monochrome look.
 - New **IBM PS/2 Monochrome** look (Windows Terminal): the 8503 display, where the VGA colors become
   brightness levels of the phosphor color.
 - **Two independent parts.** Windows Terminal support is now the **RetroLooks PowerShell module**

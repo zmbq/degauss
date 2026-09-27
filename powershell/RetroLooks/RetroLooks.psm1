@@ -23,6 +23,12 @@ $script:UserNames = @{ vscode = 'the Retro Looks VS Code extension' }
 $script:FontFilePrefix = 'RetroLooks-'
 # The tests replace this with a fake that records its arguments.
 $script:WtCommand = 'wt.exe'
+# The one visible profile, "Retro Looks": a copy of the user's default look. Its GUID never changes, so it
+# can be Windows Terminal's default profile and stay that way when the default look changes.
+$script:RetroProfileGuid = '{a6d71c0c-85f8-4da5-86cb-db4958ba596b}'
+$script:RetroProfileName = 'Retro Looks'
+# The look `look` opens when nothing else was chosen.
+$script:FallbackLook = 'apple2e'
 
 $Esc = [char]27
 $St = "$Esc\"   # String Terminator, ends an OSC sequence
@@ -257,21 +263,66 @@ function Write-TerminalSequence([string]$Sequence) {
 
 # ---------- preferences ----------
 
+# defaultLook: what `look` and the Retro Looks profile open; colors: each look's default color;
+# showProfiles, keepFontSizes: Install-RetroLooks's choices, kept for when the fragment is rewritten.
 function Get-RetroPreference {
-    $prefs = @{ defaultLook = $null; colors = @{} }
+    $prefs = @{ defaultLook = $null; colors = @{}; showProfiles = $false; keepFontSizes = $false }
     $file = Join-Path $script:DataDir 'terminal.json'
     if (Test-Path $file) {
         $saved = Get-Content $file -Raw | ConvertFrom-Json
         if ($saved.defaultLook) { $prefs.defaultLook = $saved.defaultLook }
         if ($saved.colors) { foreach ($entry in $saved.colors.PSObject.Properties) { $prefs.colors[$entry.Name] = $entry.Value } }
+        $prefs.showProfiles = [bool]$saved.showProfiles
+        $prefs.keepFontSizes = [bool]$saved.keepFontSizes
     }
     return $prefs
 }
 
 function Save-RetroPreference([hashtable]$Prefs) {
     New-Item -ItemType Directory -Force $script:DataDir | Out-Null
-    $json = [pscustomobject]@{ defaultLook = $Prefs.defaultLook; colors = [pscustomobject]$Prefs.colors } | ConvertTo-Json -Depth 5
+    $json = [pscustomobject]@{
+        defaultLook = $Prefs.defaultLook; colors = [pscustomobject]$Prefs.colors
+        showProfiles = [bool]$Prefs.showProfiles; keepFontSizes = [bool]$Prefs.keepFontSizes
+    } | ConvertTo-Json -Depth 5
     [IO.File]::WriteAllText((Join-Path $script:DataDir 'terminal.json'), $json, (New-Object Text.UTF8Encoding $false))
+}
+
+function Get-DefaultLookId([hashtable]$Prefs) {
+    if ($Prefs.defaultLook -and (Find-RetroLook $Prefs.defaultLook)) { return $Prefs.defaultLook }
+    return $script:FallbackLook
+}
+
+# Writes the Windows Terminal fragment: a hidden profile per look (what `look` opens) and the visible
+# Retro Looks profile, a copy of the default look. Terminal reads it when it starts.
+function Write-RetroFragment([hashtable]$Prefs) {
+    $shell = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { 'pwsh.exe' } else { 'powershell.exe' }
+    $pixelsPerEm = @{}
+    foreach ($font in Get-RetroFont) { if ($font.pixelsPerEm) { $pixelsPerEm[$font.family] = [int]$font.pixelsPerEm } }
+    $fragment = Get-Content (Join-Path $script:ModuleRoot 'retro-looks.json') -Raw | ConvertFrom-Json
+    $dpi = Get-DisplayDpi
+    foreach ($terminalProfile in $fragment.profiles) {
+        # Each tab applies its saved color (and a color handed over by `look -Color`) when it opens.
+        $terminalProfile | Add-Member -NotePropertyName commandline -NotePropertyValue "$shell -NoLogo -NoExit -Command Initialize-RetroTab" -Force
+        $terminalProfile.hidden = -not $Prefs.showProfiles
+        $grid = $pixelsPerEm[$terminalProfile.font.face]
+        if ($grid -and -not $Prefs.keepFontSizes) {
+            $terminalProfile.font.size = Get-SharpPoints $terminalProfile.font.size $grid $dpi
+        }
+    }
+
+    $defaultLook = Find-RetroLook (Get-DefaultLookId $Prefs)
+    $source = $fragment.profiles | Where-Object { $_.guid -eq $defaultLook.guid }
+    $retro = $source | ConvertTo-Json -Depth 5 | ConvertFrom-Json   # a copy
+    $retro.guid = $script:RetroProfileGuid
+    $retro.name = $script:RetroProfileName
+    $retro.hidden = $false
+    # -Look tells the tab which look this copy was made from, so it can notice a newer default.
+    $retro.commandline = "$shell -NoLogo -NoExit -Command Initialize-RetroTab -Look $($defaultLook.id)"
+    $fragment.profiles = @($retro) + @($fragment.profiles)
+
+    New-Item -ItemType Directory -Force $script:FragmentDir | Out-Null
+    $json = $fragment | ConvertTo-Json -Depth 10
+    [IO.File]::WriteAllText((Join-Path $script:FragmentDir 'retro-looks.json'), $json, (New-Object Text.UTF8Encoding $false))
 }
 
 # ---------- looks ----------
@@ -285,8 +336,14 @@ function Find-RetroLook([string]$Name) {
     return $null
 }
 
-# The look of the current Windows Terminal tab, from the profile Terminal says it was opened with.
+# The look of the current Windows Terminal tab: the one Initialize-RetroTab recorded when the tab opened,
+# or else the one of the profile Terminal says the tab was opened with.
 function Get-CurrentLook {
+    if ($env:TERM_PROGRAM -eq 'vscode') { return $null }   # VS Code's terminal follows the VS Code look
+    if ($env:RETRO_LOOK) {
+        $look = Find-RetroLook $env:RETRO_LOOK
+        if ($look) { return $look }
+    }
     if (-not $env:WT_PROFILE_ID) { return $null }
     $id = $env:WT_PROFILE_ID.Trim('{', '}').ToLower()
     foreach ($look in Get-LookData) {
@@ -358,24 +415,39 @@ function Set-RetroColor {
 function Initialize-RetroTab {
     <#
     .SYNOPSIS
-    Applies a Retro Looks tab's color when it opens. The Retro Looks profiles run it; you don't need to.
+    Sets up a Retro Looks tab when it opens. The Retro Looks profiles run it; you don't need to.
+    .PARAMETER Look
+    The look the Retro Looks profile was made from (the other profiles are found by their GUID).
     #>
     [CmdletBinding()]
-    param()
-    $look = Get-CurrentLook
-    if (-not $look) { return }
+    param([string]$Look)
+    $target = if ($Look) { Find-RetroLook $Look } else { Get-CurrentLook }
+    if (-not $target) { return }
+    # Remember the look for `color`, which otherwise goes by the profile's GUID.
+    $env:RETRO_LOOK = $target.id
+
+    # Windows Terminal reads the Retro Looks profile when it starts, so after a new default look it keeps
+    # opening the old one until it's restarted.
+    $prefs = Get-RetroPreference
+    if ($Look) {
+        $default = Find-RetroLook (Get-DefaultLookId $prefs)
+        if ($default.id -ne $target.id) {
+            Write-Host "Your default look is now $($default.name), but Windows Terminal still has $($target.name) loaded for the Retro Looks profile. Close all Windows Terminal windows and reopen it to switch." -ForegroundColor Yellow
+        }
+    }
+
     $spec = $null
     # A color handed over by `look -Color`, if it's for this look and fresh.
     $pending = Join-Path $script:DataDir 'pending-color'
     if (Test-Path $pending) {
         $parts = (Get-Content $pending -Raw).Trim() -split '\|'
-        if ($parts[0] -eq $look.id -and ((Get-Date).ToUniversalTime().Ticks - [long]$parts[2]) -lt [TimeSpan]::FromMinutes(1).Ticks) {
+        if ($parts[0] -eq $target.id -and ((Get-Date).ToUniversalTime().Ticks - [long]$parts[2]) -lt [TimeSpan]::FromMinutes(1).Ticks) {
             $spec = $parts[1]
         }
         Remove-Item $pending -Force -ErrorAction SilentlyContinue
     }
-    if (-not $spec) { $spec = (Get-RetroPreference).colors[$look.id] }
-    if ($spec) { Write-TerminalSequence (Get-SpecSequence (ConvertFrom-ColorSpec $spec) $look) }
+    if (-not $spec) { $spec = $prefs.colors[$target.id] }
+    if ($spec) { Write-TerminalSequence (Get-SpecSequence (ConvertFrom-ColorSpec $spec) $target) }
 }
 
 function Set-RetroLook {
@@ -391,7 +463,8 @@ function Set-RetroLook {
     .PARAMETER Color
     Open the tab in this color: a preset, #RRGGBB or a DOS code (see Set-RetroColor).
     .PARAMETER SetAsDefault
-    Make this look (and -Color, if given) what `look` opens without arguments.
+    Also make this look (and -Color, if given) your default: what `look` opens without arguments, and what
+    the Retro Looks profile in Windows Terminal's menu opens (after a Windows Terminal restart).
     .PARAMETER Off
     Open a normal tab (your default Windows Terminal profile) instead.
     .PARAMETER KeepTab
@@ -418,17 +491,24 @@ function Set-RetroLook {
     if (-not $Off) {
         $prefs = Get-RetroPreference
         $name = $Look
-        if (-not $name) { $name = $prefs.defaultLook }
-        if (-not $name) { $name = 'apple2e' }
+        if (-not $name) { $name = Get-DefaultLookId $prefs }
         $target = Find-RetroLook $name
         if (-not $target) { throw "Unknown look '$name'. Looks: $((Get-LookNames) -join ', ')." }
         $parsed = $null
         if ($Color) { $parsed = ConvertFrom-ColorSpec $Color }
         if ($SetAsDefault) {
+            $previous = Get-DefaultLookId $prefs
             $prefs.defaultLook = $target.id
             if ($parsed) { $prefs.colors[$target.id] = $parsed.Stored }
             Save-RetroPreference $prefs
-            Write-Host "'look' now opens $($target.name)$(if ($parsed) { " in $($parsed.Stored)" })."
+            $installed = Test-Path (Join-Path $script:FragmentDir 'retro-looks.json')
+            if ($installed) { Write-RetroFragment $prefs }
+            $color = $prefs.colors[$target.id]
+            if (-not $color) { $color = $target.defaultColor }
+            Write-Host "Default look: $($target.name)$(if ($color) { " ($color)" })."
+            if ($installed -and $previous -ne $target.id) {
+                Write-Host 'The Retro Looks profile in Windows Terminal switches to it after you restart Windows Terminal (close all its windows).'
+            }
         }
     }
 
@@ -469,7 +549,7 @@ function Get-RetroLook {
             Look    = @($look.aliases)[0]
             Aliases = @($look.aliases) -join ', '
             Color   = $color
-            Default = ($prefs.defaultLook -eq $look.id) -or (-not $prefs.defaultLook -and $look.id -eq 'apple2e')
+            Default = (Get-DefaultLookId $prefs) -eq $look.id
             Current = $current -and $current.id -eq $look.id
         }
     }
@@ -480,14 +560,15 @@ function Install-RetroLooks {
     .SYNOPSIS
     Installs the Retro Looks fonts and adds the looks to Windows Terminal.
     .DESCRIPTION
-    Installs the fonts for the current user (no admin needed) and writes a Windows Terminal fragment with a
-    profile and color schemes for each look. The profiles are hidden: open the looks with Set-RetroLook
-    (alias look). Pixel fonts are sized for the display's scaling so they stay sharp. Restart Windows
-    Terminal afterwards. Running it again updates an existing installation.
+    Installs the fonts for the current user (no admin needed) and writes a Windows Terminal fragment: one
+    visible profile, Retro Looks, which opens your default look (make it Windows Terminal's default profile
+    if you like), and a hidden profile per look, which Set-RetroLook (alias look) opens. Pixel fonts are
+    sized for the display's scaling so they stay sharp. Restart Windows Terminal afterwards. Running it
+    again updates an existing installation.
     .PARAMETER KeepFontSizes
     Use the profiles' nominal font sizes instead of the sharpest sizes for this display's scaling.
     .PARAMETER ShowProfiles
-    Also show the looks in Windows Terminal's profile menu.
+    Also show every look in Windows Terminal's profile menu.
     #>
     [CmdletBinding()]
     param([switch]$KeepFontSizes, [switch]$ShowProfiles)
@@ -495,26 +576,15 @@ function Install-RetroLooks {
     Install-RetroFont
     Add-FontMarker
 
-    $shell = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { 'pwsh.exe' } else { 'powershell.exe' }
-    $pixelsPerEm = @{}
-    foreach ($font in Get-RetroFont) { if ($font.pixelsPerEm) { $pixelsPerEm[$font.family] = [int]$font.pixelsPerEm } }
-    $fragment = Get-Content (Join-Path $script:ModuleRoot 'retro-looks.json') -Raw | ConvertFrom-Json
-    $dpi = Get-DisplayDpi
-    foreach ($terminalProfile in $fragment.profiles) {
-        # Each tab applies its saved color (and a color handed over by `look -Color`) when it opens.
-        $terminalProfile | Add-Member -NotePropertyName commandline -NotePropertyValue "$shell -NoLogo -NoExit -Command Initialize-RetroTab" -Force
-        $terminalProfile.hidden = -not $ShowProfiles
-        $grid = $pixelsPerEm[$terminalProfile.font.face]
-        if ($grid -and -not $KeepFontSizes) {
-            $terminalProfile.font.size = Get-SharpPoints $terminalProfile.font.size $grid $dpi
-        }
-    }
-    New-Item -ItemType Directory -Force $script:FragmentDir | Out-Null
-    $json = $fragment | ConvertTo-Json -Depth 10
-    [IO.File]::WriteAllText((Join-Path $script:FragmentDir 'retro-looks.json'), $json, (New-Object Text.UTF8Encoding $false))
+    $prefs = Get-RetroPreference
+    $prefs.showProfiles = [bool]$ShowProfiles
+    $prefs.keepFontSizes = [bool]$KeepFontSizes
+    Save-RetroPreference $prefs
+    Write-RetroFragment $prefs
 
     Write-Host ''
-    Write-Host 'Retro Looks installed. Close all Windows Terminal windows and reopen it, then type'
+    Write-Host 'Retro Looks installed. Close all Windows Terminal windows and reopen it. Then open the'
+    Write-Host "Retro Looks profile from Terminal's menu, or type, in any PowerShell tab:"
     Write-Host "  look apple         (or: $((Get-LookNames) -join ', '))"
     Write-Host '  color amber        (or #RRGGBB, or a DOS code like 0A)'
     Write-Host 'Get-RetroLook lists the looks.'
