@@ -3,12 +3,12 @@
 Vintage computer looks for **VS Code** and **Windows Terminal**: period-correct fonts and color schemes
 from the machines we grew up on.
 
-| Look | Font | What it looks like |
-|---|---|---|
-| **Apple //e Green** | PR Number 3 (the //e 80-column font) | Green phosphor monitor, like Apple's own Monitor II |
-| **Apple //e Amber** | PR Number 3 | Amber monitor, the popular third-party alternative |
-| **IBM PS/2 VGA** *(Windows Terminal only)* | PxPlus IBM VGA 9x16 | The black DOS prompt with the 16 VGA colors |
-| **IBM 3270** | IBM 3270 | Mainframe green screen with the default ISPF editor highlighting |
+| Look                                               | Font                                 | What it looks like                                               |
+| -------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------- |
+| **Apple //e Green**                          | PR Number 3 (the //e 80-column font) | Green phosphor monitor, like Apple's own Monitor II              |
+| **Apple //e Amber**                          | PR Number 3                          | Amber monitor, the popular third-party alternative               |
+| **IBM PS/2 VGA** *(Windows Terminal only)* | PxPlus IBM VGA 9x16                  | The black DOS prompt with the 16 VGA colors                      |
+| **IBM 3270**                                 | IBM 3270                             | Mainframe green screen with the default ISPF editor highlighting |
 
 Want a Commodore 64, a classic Mac or a CP/M machine, or a VS Code version of the PS/2 look? [Add it!](CONTRIBUTING.md)
 
@@ -46,7 +46,7 @@ Prefer to read before you run? [Look at the script](installer/install.ps1), or d
 `retro-looks-terminal.zip` from the [latest release](https://github.com/zmbq/vscode-retro/releases/latest),
 unzip it and run `install.ps1`.
 
-To uninstall:
+To uninstall:o
 
 ```powershell
 & ([scriptblock]::Create((irm https://github.com/zmbq/vscode-retro/releases/latest/download/install.ps1))) -Uninstall

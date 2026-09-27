@@ -48,16 +48,14 @@ async function saveOriginals(context, keys) {
 }
 
 async function applyLook(context, look) {
+  let installFonts = false;
   if (isWindows && !(await isFontInstalled(look.font))) {
     const choice = await vscode.window.showWarningMessage(
       `The "${look.font.family}" font isn't installed yet.`,
       'Install Fonts', 'Apply Anyway'
     );
-    if (choice === 'Install Fonts') {
-      await install();
-    } else if (choice !== 'Apply Anyway') {
-      return;
-    }
+    if (!choice) return;
+    installFonts = choice === 'Install Fonts';
   }
   const settings = lookSettings(look);
   await saveOriginals(context, Object.keys(settings));
@@ -65,6 +63,8 @@ async function applyLook(context, look) {
   for (const [key, value] of Object.entries(settings)) {
     await config.update(key, value, vscode.ConfigurationTarget.Global);
   }
+  // Install last: its message offers to quit VS Code, and the look must be saved before that.
+  if (installFonts) await install();
 }
 
 async function restore(context, quiet = false) {
@@ -151,9 +151,14 @@ async function install() {
   fs.mkdirSync(fragmentDir, { recursive: true });
   fs.writeFileSync(path.join(fragmentDir, 'retro-looks.json'), JSON.stringify(fragment, null, 2));
 
-  vscode.window.showInformationMessage(
-    'Retro Looks: fonts and Windows Terminal profiles installed. Restart VS Code and Windows Terminal to see them.'
+  // A running VS Code keeps the font list it loaded at startup; reloading the window doesn't refresh it,
+  // and extensions can't relaunch VS Code, so the best we can offer is quitting.
+  const choice = await vscode.window.showInformationMessage(
+    'Retro Looks: fonts and Windows Terminal profiles installed. Quit VS Code and start it again to see the '
+      + 'new fonts (reloading the window isn\'t enough). Close all Windows Terminal windows too.',
+    'Quit VS Code', 'Later'
   );
+  if (choice === 'Quit VS Code') await vscode.commands.executeCommand('workbench.action.quit');
 }
 
 async function uninstall(context) {
