@@ -201,7 +201,9 @@ function terminalFragment(looks, fonts) {
 function buildPowerShell(looks, fonts, version) {
   const out = p('dist', 'powershell');
   const moduleDir = path.join(out, 'RetroLooks');
-  fs.rmSync(p('dist'), { recursive: true, force: true });
+  // Only clear what this step produces: dist/ also holds the packaged VSIX.
+  fs.rmSync(out, { recursive: true, force: true });
+  for (const file of ['retro-looks-powershell.zip', 'retro-looks-powershell.zip.sha256']) fs.rmSync(p('dist', file), { force: true });
 
   fs.mkdirSync(moduleDir, { recursive: true });
   fs.copyFileSync(p('powershell', 'RetroLooks', 'RetroLooks.psm1'), path.join(moduleDir, 'RetroLooks.psm1'));
