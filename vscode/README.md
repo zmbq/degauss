@@ -4,6 +4,8 @@ Code on the machines you grew up on. Retro Looks gives VS Code the look of vinta
 look sets a period-correct **font**, a matching **color theme** and the right **cursor**, in one step,
 and puts your own setup back when you're done.
 
+![VS Code with the Apple //e look in amber](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/hero.png)
+
 ## The looks
 
 | Look | Font | What it looks like |
@@ -11,6 +13,12 @@ and puts your own setup back when you're done.
 | **Apple //e** | PR Number 3, the //e 80-column font | A monochrome monitor in the phosphor color of your choice |
 | **IBM 3270** | IBM 3270 | A mainframe color terminal with the default ISPF editor highlighting: green text, turquoise comments, red keywords, white strings, blue directives, yellow operators |
 | **IBM 3270 Monochrome** | IBM 3270 | A 3278-style monochrome terminal: ISPF's colors become normal and intensified text, in the phosphor color of your choice |
+
+![Apple //e in green](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/apple2e-green.png)
+
+![IBM 3270 with the ISPF editor colors](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/ibm-3270.png)
+
+![IBM 3270 Monochrome in green](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/ibm-3270-mono.png)
 
 ## Getting started
 
@@ -20,6 +28,8 @@ and puts your own setup back when you're done.
 2. Open the Command Palette (`Ctrl+Shift+P`) and run **Retro: Choose Look…**.
 3. For a monochrome look, pick a phosphor color.
 
+![The Retro: Choose Look list](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/choose-look.png)
+
 **Retro: Off** puts your own theme, fonts and settings back, exactly as they were.
 
 ## Phosphor colors
@@ -28,6 +38,8 @@ Monochrome monitors came in different colors, and some 80-column cards even let 
 switches. Monochrome looks ask for their color when you choose them: **green**, **amber**, **white**,
 **cyan**, **yellow**, or **Custom…** for any `#RRGGBB`. Change it any time with
 **Retro: Set Phosphor Color…**. The change is instant.
+
+![Choosing a phosphor color](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/phosphor-colors.png)
 
 Each look remembers its own color, so your Apple //e can be amber while your 3270 stays green. The
 colors are stored in the `retroLooks.phosphorColors` setting, e.g. `{ "apple2e": "#40E0FF" }`, if you'd

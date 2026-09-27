@@ -4,6 +4,8 @@ Vintage computer looks for **VS Code** and **Windows Terminal**: period-correct 
 from the machines we grew up on. There are two independent parts: a VS Code extension and a PowerShell
 module for Windows Terminal. Use either or both; they share the same fonts.
 
+![VS Code with the Apple //e look in amber](docs/images/hero.png)
+
 | Look | Font | What it looks like |
 |---|---|---|
 | **Apple //e** | PR Number 3 (the //e 80-column font) | A monochrome monitor in the phosphor color of your choice: green, amber, white, cyan, yellow or any RGB color |
