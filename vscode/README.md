@@ -58,8 +58,8 @@ fonts with the extension, and neither removes fonts the other still uses.
 do that once it's uninstalled: VS Code would fall back to its default theme and leave the retro font
 size, line height and cursor in your settings.
 
-Uninstalling (from the Extensions view or with **Retro: Uninstall Fonts**) removes the fonts too,
-unless Retro Looks for Windows Terminal still uses them. Forgot to turn it off? Reinstall the extension
+Uninstalling the extension removes its fonts too (the next time VS Code starts), unless Retro Looks for
+Windows Terminal still uses them. Forgot to turn it off? Reinstall the extension
 and run **Retro: Off**: it still remembers your original settings.
 
 ## Commands
@@ -70,7 +70,7 @@ and run **Retro: Off**: it still remembers your original settings.
 | Retro: Apple //e, Retro: IBM 3270, … | Apply a look directly, in its remembered color |
 | Retro: Set Phosphor Color… | Change the color of the active monochrome look |
 | Retro: Off | Put your own theme, fonts and settings back |
-| Retro: Install Fonts / Uninstall Fonts | Install or remove the fonts (Windows) |
+| Retro: Install Fonts | Install the fonts (Windows; only shown while they're missing) |
 | Retro: Open Bundled Fonts Folder | Open the fonts, to install them by hand on macOS or Linux |
 
 The themes are also available on their own in the normal theme picker (`Ctrl+K Ctrl+T`), and you can use

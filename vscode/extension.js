@@ -224,10 +224,10 @@ async function applyLook(context, look) {
   if (installFonts) await install();
 }
 
-async function restore(context, looks, quiet = false) {
+async function restore(context, looks) {
   const saved = context.globalState.get(SAVED_KEY);
   if (!saved) {
-    if (!quiet) vscode.window.showInformationMessage('Retro Looks: no retro look is active.');
+    vscode.window.showInformationMessage('Retro Looks: no retro look is active.');
     return;
   }
   const config = vscode.workspace.getConfiguration();
@@ -274,11 +274,11 @@ async function migrateOldLooks(context, looks) {
 
 // ---------- Windows font install ----------
 
-// The fonts live in fonts.js, shared with the uninstall hook. They're installed in the same place and
-// under the same names as by the RetroLooks PowerShell module, and each project leaves a marker, so
-// uninstalling one never removes fonts the other still uses.
+// The fonts live in fonts.js, shared with the uninstall hook (uninstall.js), which removes them when the
+// extension is uninstalled. They're installed in the same place and under the same names as by the
+// RetroLooks PowerShell module, and each project leaves a marker, so uninstalling one never removes fonts
+// the other still uses.
 const MARKER_DESCRIPTION = () => `Retro Looks for VS Code ${require('./package.json').version}`;
-const USER_NAMES = { powershell: 'Retro Looks for Windows Terminal (the RetroLooks PowerShell module)' };
 
 async function install() {
   if (!isWindows) {
@@ -290,6 +290,7 @@ async function install() {
     return;
   }
   await retroFonts.installFonts(readJson(generated('fonts.json')), generated('fonts'), MARKER_DESCRIPTION());
+  await updateFontsContext();
 
   // A running VS Code keeps the font list it loaded at startup; reloading the window doesn't refresh it,
   // and extensions can't relaunch VS Code, so the best we can offer is quitting.
@@ -300,40 +301,23 @@ async function install() {
   if (choice === 'Quit VS Code') await vscode.commands.executeCommand('workbench.action.quit');
 }
 
-async function uninstall(context, looks) {
-  if (!isWindows) {
-    vscode.window.showInformationMessage('Retro Looks only installs fonts automatically on Windows.');
-    return;
-  }
-  await restore(context, looks, true);
-  // Someone who just removed the fonts doesn't want to be asked to install them at the next startup.
-  await dismissReminder(context);
-  retroFonts.removeMarker();
-
-  const others = retroFonts.otherFontUsers();
-  if (others.length) {
-    const names = others.map((name) => USER_NAMES[name] ?? name).join(', ');
-    const choice = await vscode.window.showInformationMessage(
-      `Retro Looks: the fonts are still used by ${names}, so they were kept.`,
-      'Remove Fonts Anyway'
-    );
-    if (choice !== 'Remove Fonts Anyway') return;
-  }
-
-  const locked = await retroFonts.removeFonts(readJson(generated('fonts.json')));
-  const suffix = locked.length
-    ? ` These font files are in use and couldn't be deleted; they're no longer registered and can be deleted from ${retroFonts.fontDir()} later: ${locked.join(', ')}.`
-    : '';
-  vscode.window.showInformationMessage(`Retro Looks: fonts removed.${suffix}`);
-}
-
 // Installations from before the markers existed: if the fonts are installed and the extension has no
 // marker yet, it adopts them, so uninstalling the other project won't remove them.
 async function adoptInstalledFonts() {
   if (!isWindows || retroFonts.hasMarker()) return;
-  const fonts = readJson(generated('fonts.json'));
-  const installed = await Promise.all(fonts.map(retroFonts.isFontInstalled));
-  if (installed.every(Boolean)) retroFonts.addMarker(MARKER_DESCRIPTION());
+  if (await allFontsInstalled()) retroFonts.addMarker(MARKER_DESCRIPTION());
+}
+
+// Windows only; elsewhere the extension can't tell yet.
+async function allFontsInstalled() {
+  if (!isWindows) return false;
+  const installed = await Promise.all(readJson(generated('fonts.json')).map(retroFonts.isFontInstalled));
+  return installed.every(Boolean);
+}
+
+// Retro: Install Fonts only shows in the Command Palette while the fonts are missing (see package.json menus).
+async function updateFontsContext() {
+  await vscode.commands.executeCommand('setContext', 'retroLooks.fontsInstalled', await allFontsInstalled());
 }
 
 function openFonts() {
@@ -368,9 +352,7 @@ async function remindToInstall(context) {
     return;
   }
 
-  const fonts = readJson(generated('fonts.json'));
-  const installed = await Promise.all(fonts.map(retroFonts.isFontInstalled));
-  if (installed.every(Boolean)) return;
+  if (await allFontsInstalled()) return;
 
   const choice = await vscode.window.showInformationMessage(
     'Retro Looks: install the retro fonts? The looks need them.',
@@ -392,7 +374,6 @@ function activate(context) {
   register('retroLooks.setColor', () => setColor(context, looks));
   register('retroLooks.off', () => restore(context, looks));
   register('retroLooks.install', () => install());
-  register('retroLooks.uninstall', () => uninstall(context, looks));
   register('retroLooks.openFonts', () => openFonts());
 
   // Editing retroLooks.phosphorColors by hand recolors the active look right away.
@@ -404,6 +385,7 @@ function activate(context) {
 
   migrateOldLooks(context, looks).catch((err) => console.error('Retro Looks: migration failed', err));
   adoptInstalledFonts()
+    .then(updateFontsContext)
     .then(() => remindToInstall(context))
     .catch((err) => console.error('Retro Looks: font check failed', err));
 }

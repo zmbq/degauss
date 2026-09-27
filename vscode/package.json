@@ -98,14 +98,18 @@
         "title": "Retro: Install Fonts"
       },
       {
-        "command": "retroLooks.uninstall",
-        "title": "Retro: Uninstall Fonts"
-      },
-      {
         "command": "retroLooks.openFonts",
         "title": "Retro: Open Bundled Fonts Folder"
       }
     ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "retroLooks.install",
+          "when": "!retroLooks.fontsInstalled"
+        }
+      ]
+    },
     "configuration": {
       "title": "Retro Looks",
       "properties": {

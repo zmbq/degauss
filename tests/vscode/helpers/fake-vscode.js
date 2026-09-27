@@ -17,6 +17,7 @@ function createFakeVscode() {
     answers: [], // queued answers: quick pick labels or input box strings
     messages: [],
     commands: {},
+    context: {}, // context keys set with setContext (they drive `when` clauses in package.json)
     listeners: [],
   };
 
@@ -72,7 +73,9 @@ function createFakeVscode() {
         fake.commands[id] = fn;
         return { dispose() {} };
       },
-      async executeCommand() {},
+      async executeCommand(id, ...args) {
+        if (id === 'setContext') fake.context[args[0]] = args[1];
+      },
     },
     env: { openExternal() {} },
     Uri: { file: (p) => ({ fsPath: p }) },

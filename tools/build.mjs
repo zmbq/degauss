@@ -153,9 +153,12 @@ function buildVscode(allLooks, fonts, version) {
       { command: 'retroLooks.setColor', title: 'Retro: Set Phosphor Color…' },
       { command: 'retroLooks.off', title: 'Retro: Off (restore previous look)' },
       { command: 'retroLooks.install', title: 'Retro: Install Fonts' },
-      { command: 'retroLooks.uninstall', title: 'Retro: Uninstall Fonts' },
       { command: 'retroLooks.openFonts', title: 'Retro: Open Bundled Fonts Folder' },
     ],
+    menus: {
+      // The extension sets retroLooks.fontsInstalled (Windows only; elsewhere the command stays visible).
+      commandPalette: [{ command: 'retroLooks.install', when: '!retroLooks.fontsInstalled' }],
+    },
     configuration: {
       title: 'Retro Looks',
       properties: {

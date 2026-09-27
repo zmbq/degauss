@@ -99,3 +99,10 @@ test('every command in package.json is registered by the extension', () => {
     assert(source.includes(`'${command}'`), `${command} is registered`);
   }
 });
+
+test('Retro: Install Fonts is only in the Command Palette while the fonts are missing', () => {
+  const entry = pkg.contributes.menus.commandPalette.find((m) => m.command === 'retroLooks.install');
+  assert.strictEqual(entry?.when, '!retroLooks.fontsInstalled');
+  const source = fs.readFileSync(path.join(root, 'vscode', 'extension.js'), 'utf8');
+  assert(source.includes("'setContext', 'retroLooks.fontsInstalled'"), 'the extension sets the context key');
+});

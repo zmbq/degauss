@@ -40,33 +40,20 @@ function useSandbox(t) {
   };
 }
 
-test('installing adds a marker; uninstalling keeps fonts the PowerShell module still uses', windowsOnly, async (t) => {
+test('installing registers and copies the fonts and adds a marker', windowsOnly, async (t) => {
   const box = useSandbox(t);
   const { createFakeVscode } = require('./helpers/fake-vscode');
   const fake = createFakeVscode();
   fake.activate();
   await fake.settle();
 
+  assert.strictEqual(fake.context['retroLooks.fontsInstalled'], false, 'Install Fonts is offered while fonts are missing');
   await fake.commands['retroLooks.install']();
+  assert.strictEqual(fake.context['retroLooks.fontsInstalled'], true, 'and hidden once they are installed');
   assert.strictEqual(box.registered(), box.fonts.length, 'all fonts registered');
   for (const f of box.fonts) assert(fs.existsSync(path.join(box.fontDir, f.installedFile)), `${f.installedFile} copied`);
   assert.match(fs.readFileSync(box.marker('vscode'), 'utf8'), /Retro Looks for VS Code \d/);
-
-  // The RetroLooks module also uses the fonts: uninstalling from VS Code keeps them.
-  fs.writeFileSync(box.marker('powershell'), 'Retro Looks for Windows Terminal');
-  await fake.commands['retroLooks.uninstall']();
-  assert(!fs.existsSync(box.marker('vscode')), 'own marker removed');
-  assert(fs.existsSync(box.marker('powershell')), "the module's marker is left alone");
-  assert.strictEqual(box.registered(), box.fonts.length, 'fonts kept');
-  assert(fake.messages.some((m) => /still used by Retro Looks for Windows Terminal/.test(m)), 'user is told why');
-
-  // Once nothing else uses them, uninstalling removes the fonts and the marker folder.
-  fs.rmSync(box.marker('powershell'));
-  await fake.commands['retroLooks.install']();
-  await fake.commands['retroLooks.uninstall']();
-  assert.strictEqual(box.registered(), 0, 'fonts unregistered');
-  for (const f of box.fonts) assert(!fs.existsSync(path.join(box.fontDir, f.installedFile)), `${f.installedFile} deleted`);
-  assert(!fs.existsSync(path.dirname(box.usersDir)), 'no RetroLooks folder left behind');
+  assert(!('retroLooks.uninstall' in fake.commands), 'no separate uninstall command: uninstalling the extension does it');
 });
 
 test('the uninstall hook removes the fonts unless the PowerShell module still uses them', windowsOnly, async (t) => {
@@ -79,13 +66,15 @@ test('the uninstall hook removes the fonts unless the PowerShell module still us
 
   fs.writeFileSync(box.marker('powershell'), 'Retro Looks for Windows Terminal');
   box.runUninstallHook();
-  assert(!fs.existsSync(box.marker('vscode')), 'marker removed');
+  assert(!fs.existsSync(box.marker('vscode')), 'own marker removed');
+  assert(fs.existsSync(box.marker('powershell')), "the module's marker is left alone");
   assert.strictEqual(box.registered(), box.fonts.length, 'fonts kept for the module');
 
   fs.rmSync(box.marker('powershell'));
   fs.writeFileSync(box.marker('vscode'), 'Retro Looks for VS Code');
   box.runUninstallHook();
   assert.strictEqual(box.registered(), 0, 'fonts removed');
+  for (const f of box.fonts) assert(!fs.existsSync(path.join(box.fontDir, f.installedFile)), `${f.installedFile} deleted`);
   assert(!fs.existsSync(path.dirname(box.usersDir)), 'no RetroLooks folder left behind');
 });
 
