@@ -69,3 +69,35 @@ test('outside a Degauss look, the text keeps its colors', async () => {
   assert(fake.decorationTypes.every((t) => !t.options.color), 'no text color');
   assert(fake.decorationTypes.every((t) => t.disposed));
 });
+
+test('the picture waits for the sound to start', async (t) => {
+  let start;
+  const play = options.play;
+  t.after(() => { options.play = play; });
+  options.play = () => new Promise((resolve) => { start = resolve; });
+  const fake = createFakeVscode();
+  fake.editors = [fakeEditor(0, 5)];
+  fake.activate();
+  await fake.settle();
+  const done = fake.commands['degauss.degauss']();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.strictEqual(fake.decorationTypes.length, 0, 'nothing moves before the sound starts');
+  start();
+  await done;
+  assert(fake.decorationTypes.length > 0, 'then it runs');
+});
+
+test('the picture goes ahead if the sound never starts or fails', async (t) => {
+  const { play, maxSoundWaitMs } = options;
+  t.after(() => Object.assign(options, { play, maxSoundWaitMs }));
+  options.maxSoundWaitMs = 10;
+  for (const player of [() => new Promise(() => {}), () => Promise.reject(new Error('no player')), () => { throw new Error('no player'); }]) {
+    options.play = player;
+    const fake = createFakeVscode();
+    fake.editors = [fakeEditor(0, 5)];
+    fake.activate();
+    await fake.settle();
+    await fake.commands['degauss.degauss']();
+    assert(fake.decorationTypes.length > 0 && fake.decorationTypes.every((d) => d.disposed));
+  }
+});

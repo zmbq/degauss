@@ -4,8 +4,8 @@
 // the sound (generated/degauss.wav, a recording of a real CRT: sounds/degauss/).
 const { execFile } = require('child_process');
 
-// Replaceable by the tests.
-const options = { frames: 32, frameMs: 40, play: playSound };
+// Replaceable by the tests. play(file) returns a promise that resolves when the sound starts.
+const options = { frames: 32, frameMs: 40, play: playSound, maxSoundWaitMs: 3000 };
 const WOBBLE_PX = 6;
 
 const toRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -38,16 +38,32 @@ function degaussFrame(t) {
   return { strength, hue: 240 * strength * Math.sin(2 * Math.PI * 4 * t), tintHue: 720 * t };
 }
 
+// Plays the sound with the system's player. Resolves when it starts: on Windows the player is a new
+// PowerShell, which takes a moment (about a second on some machines) to start, so it says when it's
+// about to play and the picture waits for that. Resolves right away if the player fails.
 function playSound(file) {
   const ignore = () => {};
   if (process.platform === 'win32') {
-    const command = `(New-Object Media.SoundPlayer '${file.replace(/'/g, "''")}').PlaySync()`;
-    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', command], { windowsHide: true }, ignore);
-  } else if (process.platform === 'darwin') {
-    execFile('afplay', [file], ignore);
-  } else {
-    execFile('paplay', [file], (err) => err && execFile('aplay', ['-q', file], ignore));
+    return new Promise((resolve) => {
+      const command = `$p = New-Object Media.SoundPlayer '${file.replace(/'/g, "''")}'; $p.Load(); `
+        + `[Console]::Out.WriteLine('playing'); [Console]::Out.Flush(); $p.PlaySync()`;
+      const child = execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', command], { windowsHide: true },
+        () => resolve());
+      child.on('error', () => resolve());
+      child.stdout.on('data', (data) => { if (String(data).includes('playing')) resolve(); });
+    });
   }
+  if (process.platform === 'darwin') execFile('afplay', [file], ignore);
+  else execFile('paplay', [file], (err) => err && execFile('aplay', ['-q', file], ignore));
+  return Promise.resolve();
+}
+
+// Waits for the sound to start, but never longer than maxSoundWaitMs: the picture goes ahead anyway.
+function soundStarted(file) {
+  let timer;
+  const timeout = new Promise((resolve) => { timer = setTimeout(resolve, options.maxSoundWaitMs); });
+  const started = Promise.resolve().then(() => options.play(file)).catch(() => {});
+  return Promise.race([started, timeout]).finally(() => clearTimeout(timer));
 }
 
 let running = false;
@@ -57,9 +73,9 @@ let running = false;
 async function degauss(vscode, { sound, color }) {
   if (running) return;
   running = true;
-  if (sound) options.play(sound);
   let current = [];
   try {
+    if (sound) await soundStarted(sound);
     for (let i = 0; i < options.frames; i++) {
       const { strength, hue, tintHue } = degaussFrame(i / options.frames);
       const types = new Map(); // wobble offset -> decoration type
