@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0
+## 0.2.0 (in progress)
 
 - **Pick your phosphor color.** Apple //e is now one look in the color of your choice: green, amber,
   white, cyan, yellow, or any `#RRGGBB` (**Retro: Set Phosphor Color…**). Each look remembers its color.
