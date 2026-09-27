@@ -307,7 +307,7 @@ async function uninstall(context, looks) {
   }
   await restore(context, looks, true);
   // Someone who just removed the fonts doesn't want to be asked to install them at the next startup.
-  await context.globalState.update(REMIND_DISMISSED_KEY, true);
+  await dismissReminder(context);
   retroFonts.removeMarker();
 
   const others = retroFonts.otherFontUsers();
@@ -342,12 +342,24 @@ function openFonts() {
 
 // ---------- startup reminder ----------
 
+// VS Code keeps an extension's saved state after it's uninstalled, but every installation gets a fresh
+// folder. "Don't remind me" is tied to this installation, so reinstalling the extension brings it back.
+function installationId(context) {
+  try {
+    return String(fs.statSync(context.extensionPath).birthtimeMs);
+  } catch {
+    return context.extensionPath;
+  }
+}
+const reminderDismissed = (context) => context.globalState.get(REMIND_DISMISSED_KEY) === installationId(context);
+const dismissReminder = (context) => context.globalState.update(REMIND_DISMISSED_KEY, installationId(context));
+
 async function remindToInstall(context) {
-  if (context.globalState.get(REMIND_DISMISSED_KEY)) return;
+  if (reminderDismissed(context)) return;
 
   if (!isWindows) {
     // Font installation can't be checked outside Windows yet, so just point at the fonts once.
-    await context.globalState.update(REMIND_DISMISSED_KEY, true);
+    await dismissReminder(context);
     const choice = await vscode.window.showInformationMessage(
       'Retro Looks needs its fonts installed. Install them with your system\'s font installer.',
       'Open Fonts Folder'
@@ -365,7 +377,7 @@ async function remindToInstall(context) {
     'Install', 'Later', 'Don\'t Show Again'
   );
   if (choice === 'Install') await install();
-  else if (choice === 'Don\'t Show Again') await context.globalState.update(REMIND_DISMISSED_KEY, true);
+  else if (choice === 'Don\'t Show Again') await dismissReminder(context);
 }
 
 // ---------- activation ----------

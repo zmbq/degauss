@@ -102,3 +102,24 @@ test('fonts installed before markers existed are adopted when the extension star
   await fake.settle();
   assert(fs.existsSync(box.marker('vscode')), 'marker added for already installed fonts');
 });
+
+test('"Don\'t Show Again" lasts for this installation; a reinstall reminds again', windowsOnly, async (t) => {
+  useSandbox(t); // no fonts installed in the sandbox, so the reminder has a reason to appear
+  const { createFakeVscode } = require('./helpers/fake-vscode');
+  const reminder = /install the retro fonts\?/;
+  const start = async (globalState, answer) => {
+    const fake = createFakeVscode();
+    if (answer) fake.answers.push(answer);
+    fake.activate(globalState);
+    await fake.settle();
+    return fake.messages.some((m) => reminder.test(m));
+  };
+
+  // Dismissed by an earlier installation (what VS Code keeps after an uninstall): remind again.
+  const state = new Map([['retroLooks.installReminderDismissed', true]]);
+  assert(await start(state, "Don't Show Again"), 'reminds after a reinstall');
+  assert(!(await start(state)), "Don't Show Again is honored for this installation");
+
+  state.set('retroLooks.installReminderDismissed', 'some other installation');
+  assert(await start(state), 'a different installation is reminded');
+});

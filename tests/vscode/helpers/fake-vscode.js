@@ -56,9 +56,10 @@ function createFakeVscode() {
         assert.strictEqual(options.validateInput?.(value) ?? null, null, `input "${value}" was rejected`);
         return value;
       },
-      async showInformationMessage(message) {
+      async showInformationMessage(message, ...buttons) {
         fake.messages.push(message);
-        return undefined;
+        // Clicks a button if it's the next queued answer; otherwise the notification is dismissed.
+        return buttons.includes(fake.answers[0]) ? fake.answers.shift() : undefined;
       },
       async showWarningMessage(message, ...buttons) {
         fake.messages.push(message);
