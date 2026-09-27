@@ -65,6 +65,8 @@ try {
         $script:Played = @()
         $script:PlaySound = { param($f) $script:Played += $f }
         $script:DegaussFrameMs = 0
+        # The tests' host has no screen to read: degauss only swirls the colors, unless a test fakes one.
+        $script:GetScreenCells = { throw 'No screen in the tests.' }
     } $paths
     $inModule = { param($block, $arg1, $arg2) & $module $block $arg1 $arg2 }
     $fonts = & $module { Get-DegaussFont }
@@ -284,6 +286,38 @@ try {
     degauss -Quiet
     $out = & $written
     Check ($out -notmatch '\]4;' -and $out.EndsWith($reset)) 'in other tabs, degauss changes only the text and background, then resets them'
+    Check ($out -notmatch '\[\?1049h') '... and, without a screen to read, never leaves it'
+
+    Write-Host '-- degauss wobbles the picture'
+    & $module {
+        $cell = { param($c, $fg, $bg) New-Object System.Management.Automation.Host.BufferCell $c, $fg, $bg, 'Complete' }
+        $cells = New-Object 'System.Management.Automation.Host.BufferCell[,]' 3, 8
+        for ($y = 0; $y -lt 3; $y++) { for ($x = 0; $x -lt 8; $x++) { $cells[$y, $x] = & $cell ' ' 'Gray' 'Black' } }
+        for ($x = 0; $x -lt 5; $x++) { $cells[0, $x] = & $cell 'PS C:'[$x] 'Gray' 'Black' }
+        $cells[1, 0] = & $cell 'E' 'Red' 'Black'
+        $cells[1, 1] = & $cell 'R' 'Yellow' 'DarkBlue'
+        $script:TestCells = $cells
+        $script:GetScreenCells = { , $script:TestCells }
+    }
+    $e = [char]27
+    $screen = & $module { ConvertFrom-ScreenCells $script:TestCells }
+    Check ($screen.Width -eq 8 -and $screen.Height -eq 3) 'the screen is read at its size'
+    Check ($screen.Lines[0] -eq "$e[39;49mPS C:$e[0m") '... default colors stay default, trailing blanks are dropped'
+    Check ($screen.Lines[1] -eq "$e[91;49mE$e[93;44mR$e[0m") '... console colors become ANSI colors'
+    Check ($screen.Lines[2] -eq '') '... and blank lines are empty'
+    & $clearWritten
+    degauss -Quiet
+    $out = & $written
+    $enter = & $module { $script:EnterWobble }
+    $leave = & $module { $script:LeaveWobble }
+    Check ($out.StartsWith($enter)) 'degauss redraws the screen on the alternate screen'
+    Check ($out.EndsWith($leave + $reset)) '... and goes back to the real one, and to the tab''s own colors'
+    Check (([regex]::Matches($out, '\]10;')).Count -eq $frames) "... still swirling the colors, $frames frames"
+    Check ($out -match "\[2;1H$e\[0m$e\[2K *$e\[39;49mPS C:") '... the picture jolts down a line when the coil fires'
+    Check ($out -match "\[1;1H$e\[0m$e\[2K +$e\[39;49mPS C:") '... then the lines wobble'
+    $last = $out.Substring($out.LastIndexOf("$e]10;"))
+    Check ($last -match "\[1;1H$e\[0m$e\[2K$e\[39;49mPS C:") '... and settle'
+    & $module { $script:GetScreenCells = { throw 'No screen in the tests.' } }
     color amber
 
     Write-Host '-- Set-DegaussLook'

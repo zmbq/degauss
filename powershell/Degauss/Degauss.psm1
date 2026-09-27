@@ -552,6 +552,18 @@ $script:PlaySound = {
 }
 $script:DegaussFrames = 32
 $script:DegaussFrameMs = 40
+# The widest wobble, in columns, is twice this (vscode/degauss.js wobbles by pixels, a terminal by cells).
+$script:DegaussWobbleColumns = 2
+# The characters and colors on screen, as a BufferCell[,]. Throws where the host can't read the screen
+# (then degauss only swirls the colors). Replaceable by the tests.
+$script:GetScreenCells = {
+    $raw = $Host.UI.RawUI
+    $position = $raw.WindowPosition
+    $size = $raw.WindowSize
+    if ($size.Width -le 0 -or $size.Height -le 0) { throw 'No screen to read.' }
+    $rectangle = New-Object System.Management.Automation.Host.Rectangle $position.X, $position.Y, ($position.X + $size.Width - 1), ($position.Y + $size.Height - 1)
+    , $raw.GetBufferContents($rectangle)
+}
 
 # The scheme a Degauss tab opened with: its profile's, in the module's copy of the fragment.
 function Get-LookScheme($Look) {
@@ -628,13 +640,82 @@ function Get-DegaussSequence($Colors, [double]$T) {
     return $sequence
 }
 
+# Console colors (the order of [ConsoleColor]) as ANSI color numbers (the order of SGR 30-37 and 90-97).
+$script:ConsoleToAnsi = @(0, 4, 2, 6, 1, 5, 3, 7, 8, 12, 10, 14, 9, 13, 11, 15)
+
+function Get-SgrColor([int]$Color, [bool]$Background) {
+    # Gray text on black is how the console reports the terminal's default colors.
+    if ($Background -and $Color -eq 0) { return 49 }
+    if (-not $Background -and $Color -eq 7) { return 39 }
+    $ansi = $script:ConsoleToAnsi[$Color]
+    $base = if ($ansi -lt 8) { 30 } else { 90 }   # 30-37, or 90-97 for the bright ones
+    if ($Background) { $base += 10 }
+    return $base + ($ansi % 8)
+}
+
+# The screen as lines of text with SGR color sequences, for redrawing it. Trailing blanks are dropped.
+function ConvertFrom-ScreenCells($Cells) {
+    $height = $Cells.GetLength(0)
+    $width = $Cells.GetLength(1)
+    $lines = New-Object 'string[]' $height
+    for ($y = 0; $y -lt $height; $y++) {
+        # The last cell that isn't a blank on the default background.
+        $last = -1
+        for ($x = $width - 1; $x -ge 0; $x--) {
+            $cell = $Cells[$y, $x]
+            if (($cell.Character -ne ' ' -and $cell.Character -ne [char]0) -or [int]$cell.BackgroundColor -ne 0) { $last = $x; break }
+        }
+        $line = New-Object System.Text.StringBuilder
+        $colors = -1   # the current foreground and background, as one number
+        for ($x = 0; $x -le $last; $x++) {
+            $cell = $Cells[$y, $x]
+            if ($cell.BufferCellType -eq 'Trailing') { continue }   # the right half of a wide character
+            $next = 16 * [int]$cell.ForegroundColor + [int]$cell.BackgroundColor
+            if ($next -ne $colors) {
+                [void]$line.Append("$Esc[$(Get-SgrColor ([int]$cell.ForegroundColor) $false);$(Get-SgrColor ([int]$cell.BackgroundColor) $true)m")
+                $colors = $next
+            }
+            $character = if ($cell.Character -eq [char]0) { ' ' } else { $cell.Character }
+            [void]$line.Append($character)
+        }
+        if ($colors -ge 0) { [void]$line.Append("$Esc[0m") }
+        $lines[$y] = $line.ToString()
+    }
+    return @{ Lines = $lines; Width = $width; Height = $height }
+}
+
+# One frame of the picture at time $T (0 to 1), redrawn on the alternate screen: each line shifted right by a
+# wave that dies away, like vscode/degauss.js's wobble. The first frames jolt down a line, like the picture
+# jumping when the coil fires.
+function Get-WobbleFrame($Screen, [double]$T, [int]$Frame) {
+    $strength = (1 - $T) * (1 - $T)
+    $jolt = if ($Frame -lt 2) { 1 } else { 0 }
+    $out = New-Object System.Text.StringBuilder
+    if ($jolt) { [void]$out.Append("$Esc[1;1H$Esc[0m$Esc[2K") }
+    for ($y = 0; $y + $jolt -lt $Screen.Height; $y++) {
+        $wave = $script:DegaussWobbleColumns * $strength * (1 + [math]::Sin(2 * [math]::PI * ($y / 10 + 5 * $T)))
+        $offset = [int][math]::Floor($wave + 0.5)
+        [void]$out.Append("$Esc[$($y + $jolt + 1);1H$Esc[0m$Esc[2K")
+        if ($offset) { [void]$out.Append(' ' * $offset) }
+        [void]$out.Append($Screen.Lines[$y])
+    }
+    return $out.ToString()
+}
+
+# Onto the alternate screen (the real one, scrollback and all, is left untouched), cursor hidden, and no
+# wrapping, so lines shifted past the right edge are cut off. And back again.
+$script:EnterWobble = "$Esc[?1049h$Esc[?25l$Esc[?7l"
+$script:LeaveWobble = "$Esc[0m$Esc[?7h$Esc[?1049l$Esc[?25h"
+
 function Invoke-Degauss {
     <#
     .SYNOPSIS
-    Degausses the terminal, like the button on a CRT monitor: a hum, and a second of swirling colors. Alias: degauss.
+    Degausses the terminal, like the button on a CRT monitor: a thunk, a hum, and a second of wobbling, swirling colors. Alias: degauss.
     .DESCRIPTION
-    Works in any terminal tab. Like the real thing, it also fixes the colors: afterwards the tab is back to
-    its own colors, including ones Windows Terminal threw away (for example when you switch input languages).
+    Works in any terminal tab. Where the screen can be read (Windows Terminal, the Windows console), the
+    picture wobbles too; it's redrawn on the alternate screen, so nothing on the real one changes. Like the
+    real thing, it also fixes the colors: afterwards the tab is back to its own colors, including ones
+    Windows Terminal threw away (for example when you switch input languages).
     .PARAMETER Quiet
     Without the sound.
     .EXAMPLE
@@ -643,17 +724,27 @@ function Invoke-Degauss {
     [CmdletBinding()]
     param([switch]$Quiet)
     $colors = Get-TabColors
+    # The picture wobbles where the screen can be read; elsewhere only the colors swirl.
+    $screen = $null
+    try { $screen = ConvertFrom-ScreenCells (& $script:GetScreenCells) } catch { Write-Verbose "Colors only: $_" }
     # Worked out before the sound starts, so the frames keep up with it.
-    $frames = for ($i = 0; $i -lt $script:DegaussFrames; $i++) { Get-DegaussSequence $colors ($i / $script:DegaussFrames) }
+    $frames = for ($i = 0; $i -lt $script:DegaussFrames; $i++) {
+        $t = $i / $script:DegaussFrames
+        $frame = Get-DegaussSequence $colors $t
+        if ($screen) { $frame += Get-WobbleFrame $screen $t $i }
+        $frame
+    }
     if (-not $Quiet) {
         try { & $script:PlaySound (Join-Path $script:ModuleRoot 'degauss.wav') } catch { Write-Verbose "No sound: $_" }
     }
     try {
+        if ($screen) { Write-TerminalSequence $script:EnterWobble }
         foreach ($frame in $frames) {
             Write-TerminalSequence $frame
             if ($script:DegaussFrameMs) { Start-Sleep -Milliseconds $script:DegaussFrameMs }
         }
     } finally {
+        if ($screen) { Write-TerminalSequence $script:LeaveWobble }
         Write-TerminalSequence $script:ResetSequence
         if ($script:TabSequence) { Write-TerminalSequence $script:TabSequence }
     }

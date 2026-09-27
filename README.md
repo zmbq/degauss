@@ -69,7 +69,7 @@ color amber -SetAsDefault  # new tabs of this look open in amber
 look apple -Color amber -SetAsDefault   # your default look: switches now, and is what `look` alone
                                         # and the Degauss profile open
 Get-DegaussLook            # list the looks
-degauss                    # thunk, hum, swirling colors (-Quiet for no sound); also brings back
+degauss                    # thunk, hum, wobbling, swirling colors (-Quiet for no sound); also brings back
                            # colors Windows Terminal threw away
 ```
 
