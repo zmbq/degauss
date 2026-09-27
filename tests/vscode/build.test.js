@@ -124,3 +124,13 @@ test('release notes are the changelog entry for the version', async () => {
   assert.throws(() => releaseNotes(changelog, '1.3.0'), /No "## 1.3.0" entry/);
   assert.throws(() => releaseNotes('## 2.0.0\n\n## 1.0.0\n\nOld.\n', '2.0.0'), /empty/);
 });
+
+test('release tags match the version; a suffix makes a test release', async () => {
+  const { parseReleaseTag } = await import('../../tools/release-tag.mjs');
+  assert.deepStrictEqual(parseReleaseTag('vscode', 'vscode-v1.2.3', '1.2.3'), { version: '1.2.3', prerelease: false, name: '1.2.3' });
+  assert.deepStrictEqual(parseReleaseTag('powershell', 'powershell-v1.2.3-rc.1', '1.2.3'), { version: '1.2.3', prerelease: true, name: '1.2.3-rc.1' });
+  assert.throws(() => parseReleaseTag('vscode', 'vscode-v1.2.4', '1.2.3'), /does not match/);
+  assert.throws(() => parseReleaseTag('vscode', 'vscode-v1.2.4-rc.1', '1.2.3'), /does not match/);
+  assert.throws(() => parseReleaseTag('vscode', 'powershell-v1.2.3', '1.2.3'), /is not vscode-v/);
+  assert.throws(() => parseReleaseTag('vscode', 'vscode-v1.2.3rc1', '1.2.3'), /is not vscode-v/);
+});

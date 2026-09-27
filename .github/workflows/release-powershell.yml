@@ -2,6 +2,8 @@ name: Release PowerShell module
 
 # Push a tag like powershell-v1.2.3, matching ModuleVersion in powershell/Degauss/Degauss.psd1,
 # to release the module. Its release is marked "latest", because install.ps1 downloads from releases/latest.
+# A tag with a suffix, like powershell-v1.2.3-rc.1, is a test release: a GitHub pre-release, never "latest";
+# install it with install.ps1 -Version powershell-v1.2.3-rc.1.
 on:
   push:
     tags: ['powershell-v*']
@@ -25,10 +27,7 @@ jobs:
       - name: Check the tag matches the module's version
         run: |
           version=$(grep -oP "ModuleVersion\s*=\s*'\K[0-9.]+" powershell/Degauss/Degauss.psd1)
-          if [ "powershell-v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match the module version $version"; exit 1
-          fi
-          echo "VERSION=$version" >> "$GITHUB_ENV"
+          node tools/release-tag.mjs powershell "$GITHUB_REF_NAME" "$version" >> "$GITHUB_ENV"
 
       - run: node tools/build.mjs
 
@@ -37,6 +36,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           node tools/release-notes.mjs powershell/CHANGELOG.md "$VERSION" > release-notes.md
-          gh release create "$GITHUB_REF_NAME" --title "Degauss PowerShell module $VERSION" \
-            --notes-file release-notes.md --latest \
+          latest=$([ "$PRERELEASE" = true ] && echo '--prerelease --latest=false' || echo --latest)
+          gh release create "$GITHUB_REF_NAME" --title "Degauss PowerShell module $RELEASE_NAME" \
+            --notes-file release-notes.md $latest \
             dist/degauss-powershell.zip dist/degauss-powershell.zip.sha256 powershell/install.ps1
