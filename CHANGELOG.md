@@ -12,7 +12,8 @@
   presets, `#RRGGBB` or DOS codes like `0A`. `-SetAsDefault` remembers either. Terminal's menu gets a
   single **Retro Looks** profile that opens your default look, so you can make it Terminal's default
   profile; the per-look profiles are hidden (`Install-RetroLooks -ShowProfiles` shows them). There's also a
-  color scheme for every preset color of every monochrome look.
+  color scheme for every preset color of every monochrome look. The first `look` offers to set up the
+  fonts and profiles if they aren't yet, and to refresh them after the module was updated.
 - New **IBM PS/2 Monochrome** look (Windows Terminal): the 8503 display, where the VGA colors become
   brightness levels of the phosphor color.
 - **Two independent parts.** Windows Terminal support is now the **RetroLooks PowerShell module**

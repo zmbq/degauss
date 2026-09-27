@@ -48,7 +48,9 @@ irm https://github.com/zmbq/vscode-retro/releases/latest/download/install.ps1 | 
 ```
 
 It installs the module for both PowerShell 7 and Windows PowerShell, then runs `Install-RetroLooks`,
-which installs the fonts and adds the looks to Windows Terminal. Close all Windows Terminal windows and
+which installs the fonts and adds the looks to Windows Terminal. (Installed the module another way, e.g.
+with `Install-Module`? The first `look` offers to run the setup for you, and after an update it offers to
+refresh it. You can always run `Install-RetroLooks` yourself.) Close all Windows Terminal windows and
 reopen it. Then pick **Retro Looks** from Terminal's profile menu, or, in any PowerShell tab:
 
 ```powershell

@@ -56,6 +56,10 @@ try {
         function script:Write-TerminalSequence([string]$Sequence) { $script:Written += $Sequence }
         $script:WtCalls = @()
         $script:WtCommand = { $script:WtCalls += , @($args) }
+        # Scripted answers to yes/no questions (none queued means no).
+        $script:Answers = New-Object System.Collections.Queue
+        $script:Questions = @()
+        $script:AskUser = { param($q) $script:Questions += $q; if ($script:Answers.Count) { $script:Answers.Dequeue() } else { $false } }
     } $paths
     $inModule = { param($block, $arg1, $arg2) & $module $block $arg1 $arg2 }
     $fonts = & $module { Get-RetroFont }
@@ -71,6 +75,38 @@ try {
     $retroGuid = & $module { $script:RetroProfileGuid }
     $lookProfiles = { param($f) @($f.profiles | Where-Object { $_.guid -ne $retroGuid }) }
     $retroProfile = { param($f) $f.profiles | Where-Object { $_.guid -eq $retroGuid } }
+
+    Write-Host '-- first use'
+    $answer = { param($yes) & $module { param($a) $script:Answers.Enqueue($a) } $yes }
+    $questions = { & $module { $script:Questions } }
+    $env:WT_SESSION = 'test'; $env:TERM_PROGRAM = $null
+    Push-Location $sandbox
+    & $clearWritten
+    color amber
+    Check ((& $written) -match '\]4;0;rgb:') 'color works before any setup'
+    & $answer $false
+    look apple -KeepTab 6>$null
+    Check ((@(& $questions) -join ' ') -match "isn't set up yet") 'the first look offers to set up'
+    Check (-not (Test-Path $fragmentFile) -and (& $registered).Count -eq 0 -and @(& $wtCalls).Count -eq 0) 'declining leaves everything untouched'
+    & $answer $true
+    $message = look apple -KeepTab 6>&1 | Out-String
+    Check ((Test-Path $fragmentFile) -and (& $registered).Count -eq $fonts.Count) 'accepting installs the fonts and Terminal profiles'
+    Check (@(& $wtCalls).Count -eq 0 -and $message -match 'Restart Windows Terminal') '... and asks for a Terminal restart instead of opening a tab Terminal cannot know yet'
+    $asked = @(& $questions).Count
+    look apple -KeepTab
+    Check (@(& $wtCalls).Count -eq 1 -and @(& $questions).Count -eq $asked) 'once set up, look just works'
+    & $module { $p = Get-RetroPreference; $p.installedVersion = '0.0.1'; Save-RetroPreference $p }
+    & $answer $true
+    & $clearWt
+    $message = look apple -KeepTab 6>&1 | Out-String
+    Check ((@(& $questions)[-1]) -match 'updated \(0\.0\.1 to ') 'after an update, look offers to refresh the setup'
+    Check ((Get-Content $prefsFile -Raw | ConvertFrom-Json).installedVersion -eq (& $module { Get-ModuleVersion }) -and @(& $wtCalls).Count -eq 1) '... refreshes it and carries on'
+    & $clearWt
+    look -Off -KeepTab
+    Check (@(& $wtCalls).Count -eq 1) 'look -Off never needs setup'
+    Pop-Location
+    Uninstall-RetroLooks 6>$null | Out-Null
+    $env:WT_SESSION = $null
 
     Write-Host '-- Install-RetroLooks'
     Install-RetroLooks 6>$null | Out-Null

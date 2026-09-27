@@ -29,6 +29,12 @@ $script:RetroProfileGuid = '{a6d71c0c-85f8-4da5-86cb-db4958ba596b}'
 $script:RetroProfileName = 'Retro Looks'
 # The look `look` opens when nothing else was chosen.
 $script:FallbackLook = 'apple2e'
+# Asks the user a yes/no question (default yes). The tests replace it with a scripted answer.
+$script:AskUser = {
+    param([string]$Question)
+    $choices = [System.Management.Automation.Host.ChoiceDescription[]]@('&Yes', '&No')
+    return $Host.UI.PromptForChoice('Retro Looks', $Question, $choices, 0) -eq 0
+}
 
 $Esc = [char]27
 $St = "$Esc\"   # String Terminator, ends an OSC sequence
@@ -266,7 +272,7 @@ function Write-TerminalSequence([string]$Sequence) {
 # defaultLook: what `look` and the Retro Looks profile open; colors: each look's default color;
 # showProfiles, keepFontSizes: Install-RetroLooks's choices, kept for when the fragment is rewritten.
 function Get-RetroPreference {
-    $prefs = @{ defaultLook = $null; colors = @{}; showProfiles = $false; keepFontSizes = $false }
+    $prefs = @{ defaultLook = $null; colors = @{}; showProfiles = $false; keepFontSizes = $false; installedVersion = $null }
     $file = Join-Path $script:DataDir 'terminal.json'
     if (Test-Path $file) {
         $saved = Get-Content $file -Raw | ConvertFrom-Json
@@ -274,6 +280,7 @@ function Get-RetroPreference {
         if ($saved.colors) { foreach ($entry in $saved.colors.PSObject.Properties) { $prefs.colors[$entry.Name] = $entry.Value } }
         $prefs.showProfiles = [bool]$saved.showProfiles
         $prefs.keepFontSizes = [bool]$saved.keepFontSizes
+        if ($saved.installedVersion) { $prefs.installedVersion = $saved.installedVersion }
     }
     return $prefs
 }
@@ -283,8 +290,37 @@ function Save-RetroPreference([hashtable]$Prefs) {
     $json = [pscustomobject]@{
         defaultLook = $Prefs.defaultLook; colors = [pscustomobject]$Prefs.colors
         showProfiles = [bool]$Prefs.showProfiles; keepFontSizes = [bool]$Prefs.keepFontSizes
+        installedVersion = $Prefs.installedVersion
     } | ConvertTo-Json -Depth 5
     [IO.File]::WriteAllText((Join-Path $script:DataDir 'terminal.json'), $json, (New-Object Text.UTF8Encoding $false))
+}
+
+function Get-ModuleVersion { "$($ExecutionContext.SessionState.Module.Version)" }
+
+# `look` needs the fonts and the Terminal profiles. Installing a module never runs its code, so on first use
+# this offers to set them up, and after an update it offers to refresh them. Returns $true when `look` can
+# go ahead right away.
+function Confirm-RetroSetup {
+    if (-not (Test-Path (Join-Path $script:FragmentDir 'retro-looks.json'))) {
+        $question = "Retro Looks isn't set up yet: it needs to install its fonts (for your user only) and add its profiles to Windows Terminal. Set it up now?"
+        if (-not (& $script:AskUser $question)) {
+            Write-Host 'Not set up. Run Install-RetroLooks whenever you are ready.'
+            return $false
+        }
+        Install-RetroLooks
+        Write-Host 'Restart Windows Terminal (close all its windows), then run look again.' -ForegroundColor Yellow
+        return $false
+    }
+    $prefs = Get-RetroPreference
+    $current = Get-ModuleVersion
+    if ($prefs.installedVersion -ne $current) {
+        $from = if ($prefs.installedVersion) { $prefs.installedVersion } else { 'an earlier version' }
+        if (& $script:AskUser "Retro Looks was updated ($from to $current). Refresh its fonts and Windows Terminal profiles?") {
+            Install-RetroLooks -ShowProfiles:$prefs.showProfiles -KeepFontSizes:$prefs.keepFontSizes
+            Write-Host 'Looks added in this update appear after you restart Windows Terminal.' -ForegroundColor Yellow
+        }
+    }
+    return $true
 }
 
 function Get-DefaultLookId([hashtable]$Prefs) {
@@ -486,6 +522,7 @@ function Set-RetroLook {
         Write-Host "This terminal follows the VS Code look. Use 'Retro: Choose Look...' in VS Code's Command Palette."
         return
     }
+    if (-not $Off -and -not (Confirm-RetroSetup)) { return }
 
     $target = $null
     if (-not $Off) {
@@ -579,6 +616,7 @@ function Install-RetroLooks {
     $prefs = Get-RetroPreference
     $prefs.showProfiles = [bool]$ShowProfiles
     $prefs.keepFontSizes = [bool]$KeepFontSizes
+    $prefs.installedVersion = Get-ModuleVersion
     Save-RetroPreference $prefs
     Write-RetroFragment $prefs
 
