@@ -1,0 +1,27 @@
+name: Tests
+
+# Called by the Build and Release workflows.
+on:
+  workflow_call:
+
+jobs:
+  node-tests:
+    name: Build and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm test
+
+  installer-tests:
+    name: Windows Terminal installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: node tools/build.mjs
+      - run: pwsh -NoProfile -File tests/installer.tests.ps1

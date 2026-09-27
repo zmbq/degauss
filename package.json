@@ -4,6 +4,7 @@
   "description": "Build scripts for Retro Looks. The extension itself is in extension/.",
   "scripts": {
     "build": "node tools/build.mjs",
+    "test": "node tools/build.mjs && node --test \"tests/**/*.test.js\"",
     "package": "node tools/build.mjs && cd extension && npx --yes @vscode/vsce@3 package -o ../dist/"
   }
 }

@@ -1,0 +1,22 @@
+{
+  "background": "#000000",
+  "foreground": "${normal}",
+  "cursorColor": "${normal}",
+  "selectionBackground": "${selection}",
+  "black": "#000000",
+  "red": "${bright}",
+  "green": "${normal}",
+  "yellow": "${bright}",
+  "blue": "${normal}",
+  "purple": "${bright}",
+  "cyan": "${normal}",
+  "white": "${normal}",
+  "brightBlack": "${dim}",
+  "brightRed": "${bright}",
+  "brightGreen": "${bright}",
+  "brightYellow": "${bright}",
+  "brightBlue": "${bright}",
+  "brightPurple": "${bright}",
+  "brightCyan": "${bright}",
+  "brightWhite": "${bright}"
+}

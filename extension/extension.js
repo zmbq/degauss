@@ -4,8 +4,10 @@ const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
+const { PRESETS, resolveColor, phosphorPalette, fillTemplate } = require('./palette');
 
 const SAVED_KEY = 'retroLooks.saved';
+const ACTIVE_KEY = 'retroLooks.activeLook'; // id of the look applied by the extension, if any
 const REMIND_DISMISSED_KEY = 'retroLooks.installReminderDismissed'; // per machine: fonts are per machine
 const FONT_REG_KEY = 'HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
 const FONT_REG_KEY_MACHINE = 'HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts';
@@ -63,7 +65,10 @@ async function sizesFor(look) {
   if (!grid || !pixelPerfect()) {
     return { fontSize: target, lineHeight: 0 };
   }
-  const scale = await displayScale();
+  return computeSizes(target, grid, await displayScale());
+}
+
+function computeSizes(target, grid, scale) {
   const multiple = Math.max(1, Math.round((target * scale) / grid));
   const fontPixels = multiple * grid;
   const fontSize = Math.round((fontPixels / scale) * 1000) / 1000;
@@ -112,6 +117,99 @@ async function saveOriginals(context, keys) {
   await context.globalState.update(SAVED_KEY, saved);
 }
 
+// ---------- phosphor colors ----------
+
+// Monochrome looks ship with a theme in their default color. Any other color is applied by overriding
+// that theme's colors in the user's settings, scoped to the theme ("[Apple //e]": {...}), which takes
+// effect instantly and touches nothing else.
+const COLOR_SETTINGS = ['workbench.colorCustomizations', 'editor.tokenColorCustomizations'];
+const themeKey = (look) => `[${look.theme}]`;
+const presetLabel = (preset) => preset[0].toUpperCase() + preset.slice(1);
+
+function savedColors() {
+  return vscode.workspace.getConfiguration('retroLooks').get('phosphorColors') ?? {};
+}
+
+// The look's chosen color as stored (a preset name or #RRGGBB), falling back to its default.
+function chosenColor(look) {
+  const value = savedColors()[look.id];
+  return resolveColor(value) ? value : look.monochrome.defaultColor;
+}
+
+async function saveColorChoice(look, value) {
+  const colors = { ...savedColors() };
+  if (resolveColor(value) === resolveColor(look.monochrome.defaultColor)) delete colors[look.id];
+  else colors[look.id] = value;
+  await vscode.workspace.getConfiguration('retroLooks').update(
+    'phosphorColors', Object.keys(colors).length ? colors : undefined, vscode.ConfigurationTarget.Global
+  );
+}
+
+// Sets (or, with overrides = null, removes) this theme's entry in both customization settings.
+async function setThemeOverrides(look, overrides) {
+  const config = vscode.workspace.getConfiguration();
+  for (const key of COLOR_SETTINGS) {
+    const current = config.inspect(key)?.globalValue ?? {};
+    const updated = { ...current };
+    if (overrides) updated[themeKey(look)] = overrides[key];
+    else delete updated[themeKey(look)];
+    if (JSON.stringify(updated) === JSON.stringify(current)) continue;
+    await config.update(key, Object.keys(updated).length ? updated : undefined, vscode.ConfigurationTarget.Global);
+  }
+}
+
+async function applyColor(look) {
+  if (!look.monochrome) return;
+  const color = resolveColor(chosenColor(look));
+  if (color === resolveColor(look.monochrome.defaultColor)) {
+    await setThemeOverrides(look, null); // the theme itself is already in the default color
+    return;
+  }
+  const theme = fillTemplate(fs.readFileSync(generated(look.monochrome.template), 'utf8'), phosphorPalette(color));
+  await setThemeOverrides(look, {
+    'workbench.colorCustomizations': theme.colors,
+    'editor.tokenColorCustomizations': {
+      textMateRules: theme.tokenColors.filter((rule) => rule.scope).map(({ scope, settings }) => ({ scope, settings })),
+    },
+  });
+}
+
+// Asks for a color: the presets, or a custom #RRGGBB. Returns the stored form, or undefined if cancelled.
+async function pickColor(look) {
+  const current = chosenColor(look);
+  const items = [
+    ...Object.entries(PRESETS).map(([preset, hex]) => ({
+      label: presetLabel(preset), description: preset === current ? `${hex} (current)` : hex, value: preset,
+    })),
+    { label: 'Custom…', description: PRESETS[current] ? '' : `${current} (current)`, value: null },
+  ];
+  const picked = await vscode.window.showQuickPick(items, { placeHolder: `Phosphor color for ${look.name}` });
+  if (!picked) return undefined;
+  if (picked.value) return picked.value;
+  const input = await vscode.window.showInputBox({
+    prompt: `Phosphor color for ${look.name}, as #RRGGBB`,
+    value: resolveColor(current),
+    validateInput: (value) => (resolveColor(value) ? null : 'Enter a color like #40E0FF'),
+  });
+  if (input === undefined) return undefined;
+  const value = input.trim().toLowerCase();
+  return PRESETS[value] ? value : '#' + value.replace(/^#/, '').toUpperCase();
+}
+
+async function setColor(context, looks) {
+  const active = looks.find((l) => l.id === context.globalState.get(ACTIVE_KEY));
+  if (!active?.monochrome) {
+    vscode.window.showInformationMessage('Retro Looks: choose a monochrome look first (Retro: Choose Look…).');
+    return;
+  }
+  const value = await pickColor(active);
+  if (value === undefined) return;
+  await saveColorChoice(active, value);
+  await applyColor(active);
+}
+
+// ---------- applying looks ----------
+
 async function applyLook(context, look) {
   let installFonts = false;
   if (isWindows && !(await isFontInstalled(look.font))) {
@@ -128,11 +226,13 @@ async function applyLook(context, look) {
   for (const [key, value] of Object.entries(settings)) {
     await config.update(key, value, vscode.ConfigurationTarget.Global);
   }
+  await context.globalState.update(ACTIVE_KEY, look.id);
+  await applyColor(look);
   // Install last: its message offers to quit VS Code, and the look must be saved before that.
   if (installFonts) await install();
 }
 
-async function restore(context, quiet = false) {
+async function restore(context, looks, quiet = false) {
   const saved = context.globalState.get(SAVED_KEY);
   if (!saved) {
     if (!quiet) vscode.window.showInformationMessage('Retro Looks: no retro look is active.');
@@ -142,7 +242,10 @@ async function restore(context, quiet = false) {
   for (const [key, value] of Object.entries(saved)) {
     await config.update(key, value === null ? undefined : value, vscode.ConfigurationTarget.Global);
   }
+  // The color overrides only matter while a look is active; the chosen colors themselves are kept.
+  for (const look of looks) if (look.monochrome) await setThemeOverrides(look, null);
   await context.globalState.update(SAVED_KEY, undefined);
+  await context.globalState.update(ACTIVE_KEY, undefined);
 }
 
 async function choose(context, looks) {
@@ -154,8 +257,27 @@ async function choose(context, looks) {
     { placeHolder: 'Choose a retro look' }
   );
   if (!picked) return;
-  if (picked.look) await applyLook(context, picked.look);
-  else await restore(context);
+  if (!picked.look) {
+    await restore(context, looks);
+    return;
+  }
+  if (picked.look.monochrome) {
+    const value = await pickColor(picked.look);
+    if (value === undefined) return;
+    await saveColorChoice(picked.look, value);
+  }
+  await applyLook(context, picked.look);
+}
+
+// Version 0.1 had separate Apple //e Green and Amber looks; carry an active one over to Apple //e.
+async function migrateOldLooks(context, looks) {
+  const apple = looks.find((l) => l.id === 'apple2e');
+  const oldColor = { 'Apple //e Green': 'green', 'Apple //e Amber': 'amber' }[
+    vscode.workspace.getConfiguration('workbench').get('colorTheme')
+  ];
+  if (!apple || !oldColor || !context.globalState.get(SAVED_KEY)) return;
+  await saveColorChoice(apple, oldColor);
+  await applyLook(context, apple);
 }
 
 // ---------- Windows install ----------
@@ -232,12 +354,12 @@ async function install() {
   if (choice === 'Quit VS Code') await vscode.commands.executeCommand('workbench.action.quit');
 }
 
-async function uninstall(context) {
+async function uninstall(context, looks) {
   if (!isWindows) {
     vscode.window.showInformationMessage('Retro Looks only installs fonts automatically on Windows.');
     return;
   }
-  await restore(context, true);
+  await restore(context, looks, true);
   const { fontDir, fragmentDir } = windowsPaths();
   const locked = [];
   for (const font of readJson(generated('fonts.json'))) {
@@ -303,12 +425,22 @@ function activate(context) {
 
   for (const look of looks) register(`retroLooks.apply.${look.id}`, () => applyLook(context, look));
   register('retroLooks.choose', () => choose(context, looks));
-  register('retroLooks.off', () => restore(context));
+  register('retroLooks.setColor', () => setColor(context, looks));
+  register('retroLooks.off', () => restore(context, looks));
   register('retroLooks.install', () => install());
-  register('retroLooks.uninstall', () => uninstall(context));
+  register('retroLooks.uninstall', () => uninstall(context, looks));
   register('retroLooks.openFonts', () => openFonts());
 
+  // Editing retroLooks.phosphorColors by hand recolors the active look right away.
+  context.subscriptions.push(vscode.workspace.onDidChangeConfiguration((event) => {
+    if (!event.affectsConfiguration('retroLooks.phosphorColors')) return;
+    const active = looks.find((l) => l.id === context.globalState.get(ACTIVE_KEY));
+    if (active) applyColor(active).catch((err) => console.error('Retro Looks: recoloring failed', err));
+  }));
+
+  migrateOldLooks(context, looks).catch((err) => console.error('Retro Looks: migration failed', err));
   remindToInstall(context).catch((err) => console.error('Retro Looks: install reminder failed', err));
 }
 
-module.exports = { activate, deactivate() {} };
+// `_internal` is for the tests only.
+module.exports = { activate, deactivate() {}, _internal: { computeSizes, sharpPoints } };

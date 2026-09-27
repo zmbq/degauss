@@ -8,6 +8,10 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+
+// The color math is shared with the extension, which recolors monochrome looks at runtime.
+const { PRESETS, resolveColor, phosphorPalette, fillTemplate } = createRequire(import.meta.url)('../extension/palette.js');
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const p = (...parts) => path.join(root, ...parts);
@@ -21,36 +25,12 @@ const writeJson = (file, data) => {
 const FONT_FILE_PREFIX = 'RetroLooks-';
 const registryName = (family) => `${family} (TrueType)`;
 
-// ---------- phosphor (monochrome) palettes ----------
+// ---------- monochrome looks ----------
 
-function hexToRgb(hex) {
-  const n = parseInt(hex.replace('#', ''), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-function rgbToHex(rgb) {
-  return '#' + rgb.map((c) => Math.round(Math.min(255, Math.max(0, c))).toString(16).padStart(2, '0')).join('').toUpperCase();
-}
-const mix = (a, b, t) => rgbToHex(hexToRgb(a).map((c, i) => c + (hexToRgb(b)[i] - c) * t));
-
-// Every shade is the phosphor color dimmed toward black or lit toward white.
-function phosphorPalette(color) {
-  const dark = (t) => mix('#000000', color, t);
-  const light = (t) => mix(color, '#FFFFFF', t);
-  return {
-    deep: dark(0.055), bg: dark(0.07), raised: dark(0.118), faint: dark(0.165), border: dark(0.227),
-    selection: dark(0.36), dim: dark(0.42), comment: dark(0.54), muted: dark(0.7), soft: dark(0.815),
-    text: dark(0.9), full: color,
-    light1: light(0.2), light2: light(0.38), light3: light(0.54), light4: light(0.7),
-  };
-}
-
-function fillTemplate(templateFile, palette) {
-  const text = fs.readFileSync(templateFile, 'utf8').replace(/\$\{(\w+)\}/g, (_, key) => {
-    if (!(key in palette)) throw new Error(`${templateFile}: unknown palette slot ${key}`);
-    return palette[key];
-  });
-  return JSON.parse(text);
-}
+// A monochrome look has one phosphor color, chosen by the user. Its VS Code theme and Terminal scheme are
+// generated from tools/templates/<style>-vscode-theme.json and <style>-terminal-scheme.json.
+const templateFile = (style, kind) => p('tools', 'templates', `${style}-${kind}.json`);
+const presetName = (preset) => preset[0].toUpperCase() + preset.slice(1);
 
 // ---------- load looks and fonts ----------
 
@@ -73,16 +53,24 @@ function loadLooks(fonts) {
     const look = readJson(path.join(dir, 'look.json'));
     if (!fonts[look.font]) throw new Error(`looks/${id}: unknown font "${look.font}"`);
     // A look without a "vscode" section is Windows Terminal only.
-    let theme = null, scheme;
-    if (look.phosphor) {
-      const palette = phosphorPalette(look.phosphor);
-      if (look.vscode) theme = fillTemplate(p('tools', 'templates', 'phosphor-vscode-theme.json'), palette);
-      scheme = fillTemplate(p('tools', 'templates', 'phosphor-terminal-scheme.json'), palette);
+    let theme = null, schemes, defaultScheme;
+    const mono = look.monochrome;
+    if (mono) {
+      if (!resolveColor(mono.defaultColor)) throw new Error(`looks/${id}: invalid defaultColor "${mono.defaultColor}"`);
+      const read = (kind) => fs.readFileSync(templateFile(mono.style, kind), 'utf8');
+      if (look.vscode) theme = fillTemplate(read('vscode-theme'), phosphorPalette(resolveColor(mono.defaultColor)));
+      // One Terminal scheme per preset, so users can pick any of them in Terminal's settings.
+      schemes = Object.entries(PRESETS).map(([preset, color]) => ({
+        name: `${look.name} ${presetName(preset)}`,
+        ...fillTemplate(read('terminal-scheme'), phosphorPalette(color)),
+      }));
+      defaultScheme = `${look.name} ${presetName(mono.defaultColor)}`;
     } else {
       if (look.vscode) theme = readJson(path.join(dir, 'vscode-theme.json'));
-      scheme = readJson(path.join(dir, 'terminal-scheme.json'));
+      schemes = [{ name: look.name, ...readJson(path.join(dir, 'terminal-scheme.json')) }];
+      defaultScheme = look.name;
     }
-    return { id, ...look, theme: theme && { name: look.name, ...theme }, scheme: { name: look.name, ...scheme } };
+    return { id, ...look, theme: theme && { name: look.name, ...theme }, schemes, defaultScheme };
   });
   return looks.sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.id.localeCompare(b.id));
 }
@@ -92,13 +80,13 @@ function loadLooks(fonts) {
 function terminalFragment(looks, fonts) {
   return {
     $help: 'Retro Looks for Windows Terminal — https://github.com/zmbq/vscode-retro',
-    schemes: looks.map((l) => l.scheme),
+    schemes: looks.flatMap((l) => l.schemes),
     profiles: looks.map((l) => ({
       guid: l.terminal.guid,
       name: l.name,
       // commandline is filled in at install time (pwsh.exe if present, otherwise powershell.exe)
       startingDirectory: '%USERPROFILE%',
-      colorScheme: l.name,
+      colorScheme: l.defaultScheme,
       font: { face: fonts[l.font].family, size: l.terminal.fontSize },
       cursorShape: l.terminal.cursorShape,
       padding: l.terminal.padding,
@@ -131,6 +119,11 @@ function buildExtension(allLooks, fonts) {
   fs.rmSync(gen, { recursive: true, force: true });
 
   for (const l of looks) writeJson(path.join(gen, 'themes', `${l.id}.json`), l.theme);
+  // The extension recolors monochrome looks at runtime from the same templates.
+  for (const style of new Set(looks.filter((l) => l.monochrome).map((l) => l.monochrome.style))) {
+    fs.mkdirSync(path.join(gen, 'templates'), { recursive: true });
+    fs.copyFileSync(templateFile(style, 'vscode-theme'), path.join(gen, 'templates', `${style}-vscode-theme.json`));
+  }
   copyFonts(fonts, path.join(gen, 'fonts'));
   writeJson(path.join(gen, 'terminal', 'retro-looks.json'), terminalFragment(allLooks, fonts));
   writeJson(path.join(gen, 'looks.json'), looks.map((l) => {
@@ -146,6 +139,9 @@ function buildExtension(allLooks, fonts) {
       },
       fontFamily: `'${f.family}', Consolas, monospace`,
       vscode: l.vscode,
+      monochrome: l.monochrome
+        ? { style: l.monochrome.style, defaultColor: l.monochrome.defaultColor, template: `templates/${l.monochrome.style}-vscode-theme.json` }
+        : null,
     };
   }));
   writeJson(path.join(gen, 'fonts.json'), Object.values(fonts).map((f) => ({
@@ -164,6 +160,7 @@ function buildExtension(allLooks, fonts) {
     commands: [
       { command: 'retroLooks.choose', title: 'Retro: Choose Look…' },
       ...looks.map((l) => ({ command: `retroLooks.apply.${l.id}`, title: `Retro: ${l.name}` })),
+      { command: 'retroLooks.setColor', title: 'Retro: Set Phosphor Color…' },
       { command: 'retroLooks.off', title: 'Retro: Off (restore previous look)' },
       { command: 'retroLooks.install', title: 'Retro: Install Fonts and Windows Terminal Profiles' },
       { command: 'retroLooks.uninstall', title: 'Retro: Uninstall Fonts and Windows Terminal Profiles' },
@@ -176,6 +173,15 @@ function buildExtension(allLooks, fonts) {
           type: 'boolean',
           default: true,
           markdownDescription: 'Adjust the font size of pixel fonts to your display scaling so every font pixel covers a whole number of screen pixels. This keeps them sharp; turn it off to use each look\'s nominal size.',
+        },
+        'retroLooks.phosphorColors': {
+          type: 'object',
+          default: {},
+          additionalProperties: { type: 'string' },
+          markdownDescription: 'The phosphor color of each monochrome look in VS Code, by look ID ('
+            + looks.filter((l) => l.monochrome).map((l) => `\`${l.id}\``).join(', ')
+            + '): a preset (' + Object.keys(PRESETS).map((c) => `\`${c}\``).join(', ')
+            + ') or `#RRGGBB`. Easiest to set with **Retro: Set Phosphor Color…**. Windows Terminal is not affected.',
         },
       },
     },

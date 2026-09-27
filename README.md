@@ -3,12 +3,12 @@
 Vintage computer looks for **VS Code** and **Windows Terminal**: period-correct fonts and color schemes
 from the machines we grew up on.
 
-| Look                                               | Font                                 | What it looks like                                               |
-| -------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------- |
-| **Apple //e Green**                          | PR Number 3 (the //e 80-column font) | Green phosphor monitor, like Apple's own Monitor II              |
-| **Apple //e Amber**                          | PR Number 3                          | Amber monitor, the popular third-party alternative               |
-| **IBM PS/2 VGA** *(Windows Terminal only)* | PxPlus IBM VGA 9x16                  | The black DOS prompt with the 16 VGA colors                      |
-| **IBM 3270**                                 | IBM 3270                             | Mainframe green screen with the default ISPF editor highlighting |
+| Look | Font | What it looks like |
+|---|---|---|
+| **Apple //e** | PR Number 3 (the //e 80-column font) | A monochrome monitor in the phosphor color of your choice: green, amber, white, cyan, yellow or any RGB color |
+| **IBM PS/2 VGA** *(Windows Terminal only)* | PxPlus IBM VGA 9x16 | The black DOS prompt with the 16 VGA colors |
+| **IBM 3270** | IBM 3270 | Mainframe color terminal with the default ISPF editor highlighting |
+| **IBM 3270 Monochrome** | IBM 3270 | A 3278-style monochrome terminal: ISPF's colors become normal and intensified text, in the phosphor color of your choice |
 
 Want a Commodore 64, a classic Mac or a CP/M machine, or a VS Code version of the PS/2 look? [Add it!](CONTRIBUTING.md)
 
@@ -18,7 +18,11 @@ Install **Retro Looks** from the Marketplace (or Open VSX), then open the Comman
 (`Ctrl+Shift+P`) and run **Retro: Choose Look…**, or one of the **Retro: …** commands directly.
 
 - A look sets the color theme, the editor and terminal fonts, font size and cursor.
-- **Retro: Off** puts back exactly what you had before.
+- **Monochrome looks** (Apple //e, IBM 3270 Monochrome) ask for their phosphor color: green, amber,
+  white, cyan, yellow, or **Custom…** for any `#RRGGBB`. Change it later with
+  **Retro: Set Phosphor Color…**. Each look remembers its own color (in the
+  `retroLooks.phosphorColors` setting), and changing it is instant.
+- **Retro: Off** puts back exactly what you had before. Your chosen colors are remembered for next time.
 - On Windows, the extension offers to install its fonts when VS Code starts (for your user only,
   no admin needed), until you install them or choose **Don't Show Again**. You can also run
   **Retro: Install Fonts and Windows Terminal Profiles**, which installs the fonts plus the
@@ -47,7 +51,7 @@ Prefer to read before you run? [Look at the script](installer/install.ps1), or d
 `retro-looks-terminal.zip` from the [latest release](https://github.com/zmbq/vscode-retro/releases/latest),
 unzip it and run `install.ps1`.
 
-To uninstall:o
+To uninstall:
 
 ```powershell
 & ([scriptblock]::Create((irm https://github.com/zmbq/vscode-retro/releases/latest/download/install.ps1))) -Uninstall
@@ -59,23 +63,29 @@ color schemes for iTerm2, Ghostty, WezTerm, kitty, Alacritty and others are on t
 
 ## Tweaking colors
 
-**Windows Terminal:** Settings → Color schemes → pick a Retro scheme → Duplicate, then edit the copy
-and select it in the profile's Appearance settings.
+**Windows Terminal:** the monochrome looks come with a color scheme for every preset color, e.g.
+*Apple //e Amber* or *IBM 3270 Monochrome Cyan*. To keep, say, a green and an amber Apple //e side by
+side: Settings → the Apple //e profile → Duplicate, then pick the other scheme under Appearance. To
+fine-tune a scheme, duplicate it under Color schemes and edit the copy.
 
-**VS Code:** override any color for just one theme in your `settings.json`:
+**VS Code:** for monochrome looks, just pick another color (any `#RRGGBB` works). To override
+individual colors of the **IBM 3270** theme, use your `settings.json`:
 
 ```jsonc
 "workbench.colorCustomizations": {
-  "[Apple //e Amber]": { "editor.background": "#1A1000" }
+  "[IBM 3270]": { "editor.background": "#050505" }
 },
 "editor.tokenColorCustomizations": {
-  "[Apple //e Amber]": { "comments": "#9A6A20" }
+  "[IBM 3270]": { "comments": "#30C0E0" }
 }
 ```
 
-**Want a whole new color,** like a white phosphor monitor? Clone this repo and ask your AI assistant
-(Claude Code, GitHub Copilot, …) to "add a white phosphor Apple //e look". The repo includes instructions
-for them ([AGENTS.md](AGENTS.md)), and monochrome looks only need one color.
+Don't do this for the monochrome themes: while one is active, the extension manages their entries in
+these two settings to apply your phosphor color.
+
+**Want a whole new machine?** Clone this repo and ask your AI assistant (Claude Code, GitHub Copilot, …)
+to add it. The repo includes instructions for them ([AGENTS.md](AGENTS.md)), and monochrome looks only
+need a font and a default color.
 
 **Font size:** pixel fonts are only sharp when every font pixel covers a whole number of screen pixels.
 On Windows, the extension reads your display scaling (and VS Code's zoom level) and picks the sharp

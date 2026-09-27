@@ -50,19 +50,19 @@
   "contributes": {
     "themes": [
       {
-        "label": "Apple //e Green",
+        "label": "Apple //e",
         "uiTheme": "vs-dark",
-        "path": "./generated/themes/apple2e-green.json"
-      },
-      {
-        "label": "Apple //e Amber",
-        "uiTheme": "vs-dark",
-        "path": "./generated/themes/apple2e-amber.json"
+        "path": "./generated/themes/apple2e.json"
       },
       {
         "label": "IBM 3270",
         "uiTheme": "vs-dark",
         "path": "./generated/themes/ibm-3270.json"
+      },
+      {
+        "label": "IBM 3270 Monochrome",
+        "uiTheme": "vs-dark",
+        "path": "./generated/themes/ibm-3270-mono.json"
       }
     ],
     "commands": [
@@ -71,16 +71,20 @@
         "title": "Retro: Choose Look…"
       },
       {
-        "command": "retroLooks.apply.apple2e-green",
-        "title": "Retro: Apple //e Green"
-      },
-      {
-        "command": "retroLooks.apply.apple2e-amber",
-        "title": "Retro: Apple //e Amber"
+        "command": "retroLooks.apply.apple2e",
+        "title": "Retro: Apple //e"
       },
       {
         "command": "retroLooks.apply.ibm-3270",
         "title": "Retro: IBM 3270"
+      },
+      {
+        "command": "retroLooks.apply.ibm-3270-mono",
+        "title": "Retro: IBM 3270 Monochrome"
+      },
+      {
+        "command": "retroLooks.setColor",
+        "title": "Retro: Set Phosphor Color…"
       },
       {
         "command": "retroLooks.off",
@@ -106,6 +110,14 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "Adjust the font size of pixel fonts to your display scaling so every font pixel covers a whole number of screen pixels. This keeps them sharp; turn it off to use each look's nominal size."
+        },
+        "retroLooks.phosphorColors": {
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "string"
+          },
+          "markdownDescription": "The phosphor color of each monochrome look in VS Code, by look ID (`apple2e`, `ibm-3270-mono`): a preset (`green`, `amber`, `white`, `cyan`, `yellow`) or `#RRGGBB`. Easiest to set with **Retro: Set Phosphor Color…**. Windows Terminal is not affected."
         }
       }
     }
