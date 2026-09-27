@@ -74,6 +74,9 @@ try {
     $wtCalls = { & $module { $script:WtCalls } }
     $clearWt = { & $module { $script:WtCalls = @() } }
     $retroGuid = & $module { $script:RetroProfileGuid }
+    $originalPrompt = (Get-Command prompt).ScriptBlock.ToString()
+    $profileScheme = { param($id) ((Get-Content $fragmentFile -Raw | ConvertFrom-Json).profiles | Where-Object guid -eq $lookById[$id].guid).colorScheme }
+    $fragmentScheme = { param($name) (Get-Content $fragmentFile -Raw | ConvertFrom-Json).schemes | Where-Object name -eq $name }
     $lookProfiles = { param($f) @($f.profiles | Where-Object { $_.guid -ne $retroGuid }) }
     $retroProfile = { param($f) $f.profiles | Where-Object { $_.guid -eq $retroGuid } }
 
@@ -198,8 +201,11 @@ try {
 
     Write-Host '-- defaults and new tabs'
     $env:WT_PROFILE_ID = $lookById['apple2e'].guid
-    color cyan -SetAsDefault 6>$null
+    $message = color cyan -SetAsDefault 6>&1 | Out-String -Width 4096
     Check ((Get-Content $prefsFile -Raw | ConvertFrom-Json).colors.apple2e -eq 'cyan') '-SetAsDefault saves the color for the look'
+    Check ((& $profileScheme 'apple2e') -eq 'Apple //e Cyan') "... and the look's Terminal profile uses it, so Terminal's color resets land on it"
+    Check ((& $retroProfile (Get-Content $fragmentFile -Raw | ConvertFrom-Json)).colorScheme -eq 'Apple //e Cyan') '... and so does the Retro Looks profile'
+    Check ($message -match 'Restart Windows Terminal') '... after a Terminal restart, which it mentions'
     & $clearWritten
     Initialize-RetroTab
     $cyan = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'phosphor' (Resolve-RetroColor $c)) } 'cyan'
@@ -207,8 +213,35 @@ try {
     & $clearWritten
     color
     Check ((& $written) -eq ((& $module { $script:ResetSequence }) + $cyan)) 'color alone goes back to the saved default'
-    color -SetAsDefault
+    color '#40E0FF' -SetAsDefault 6>$null
+    $customScheme = & $fragmentScheme 'Apple //e Custom'
+    $expected = & $inModule { param($c) Get-RetroScheme 'phosphor' (Resolve-RetroColor $c) } '#40E0FF'
+    Check ((& $profileScheme 'apple2e') -eq 'Apple //e Custom' -and $customScheme.background -eq $expected.background -and $customScheme.brightWhite -eq $expected.brightWhite) 'a custom default gets its own Terminal scheme'
+    $env:RETRO_LOOK = 'ibm-3270'
+    color 1F -SetAsDefault 6>$null
+    $dosScheme = & $fragmentScheme 'IBM 3270 Custom'
+    Check ((& $profileScheme 'ibm-3270') -eq 'IBM 3270 Custom' -and $dosScheme.background -eq '#0000AA' -and $dosScheme.foreground -eq '#FFFFFF' -and $dosScheme.red -eq '#FF3030') 'a DOS default keeps the look''s colors with DOS''s text and background'
+    color -SetAsDefault 6>$null
+    Check ((& $profileScheme 'ibm-3270') -eq 'IBM 3270') '... and forgetting it restores the look''s own scheme'
+    $env:RETRO_LOOK = 'apple2e'
+    color -SetAsDefault 6>$null
     Check (-not (Get-Content $prefsFile -Raw | ConvertFrom-Json).colors.apple2e) 'color -SetAsDefault alone forgets the saved color'
+    Check ((& $profileScheme 'apple2e') -eq 'Apple //e Green') '... and the profile goes back to the built-in scheme'
+
+    Write-Host '-- colors survive Windows Terminal resets (input language switches)'
+    color cyan
+    & $clearWritten
+    $shown = prompt
+    Check ((& $written) -eq $cyan -and $shown -eq (& ([scriptblock]::Create($originalPrompt)))) "the prompt re-sends the tab's color, and still shows the user's own prompt"
+    color amber
+    color amber
+    & $clearWritten
+    prompt | Out-Null
+    Check ((& $written) -eq $amber) 'the latest color is re-sent (and the prompt is wrapped only once)'
+    color
+    & $clearWritten
+    prompt | Out-Null
+    Check (-not (& $written)) 'after color alone (no default), nothing is re-sent'
     Check ($env:RETRO_LOOK -eq 'apple2e') 'the tab remembers its look'
     $env:WT_PROFILE_ID = $null; $env:RETRO_LOOK = $null
     Throws { color amber -SetAsDefault } 'Retro Looks tab' '-SetAsDefault outside a Retro Looks tab is refused'
@@ -308,6 +341,7 @@ try {
     Check ((& $registered).Count -eq 0) 'fonts removed when nothing else uses them'
     Check (@(Get-ChildItem $paths.Fonts -ErrorAction SilentlyContinue).Count -eq 0) 'font files deleted'
     Check (-not (Test-Path $paths.Data)) 'no RetroLooks folder left behind'
+    Check ((Get-Command prompt).ScriptBlock.ToString() -eq $originalPrompt) "the user's prompt function is back as it was"
 
     Write-Host '-- cleans up a v0.1 installation'
     New-Item -ItemType Directory -Force $paths.Fragment, $paths.Fonts | Out-Null

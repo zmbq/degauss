@@ -267,6 +267,34 @@ function Write-TerminalSequence([string]$Sequence) {
     [Console]::Write($Sequence)
 }
 
+# Windows Terminal throws away colors set by programs when the input language changes (and in a few other
+# cases; microsoft/terminal#11522). So a tab remembers its color and re-sends it with every prompt: after
+# such a reset, the color is back as soon as a command runs or Enter is pressed. The user's own prompt
+# function is wrapped, not replaced, and Uninstall-RetroLooks puts it back.
+$script:TabSequence = $null
+$script:OriginalPrompt = $null
+$script:PromptWrapper = {
+    if ($script:TabSequence) { try { Write-TerminalSequence $script:TabSequence } catch { } }
+    & $script:OriginalPrompt
+}
+
+function Set-TabColorState([string]$Sequence) {
+    $script:TabSequence = $Sequence
+    if ($Sequence -and -not $script:OriginalPrompt) {
+        $current = Get-Command prompt -CommandType Function -ErrorAction SilentlyContinue
+        $script:OriginalPrompt = if ($current) { $current.ScriptBlock } else { { "PS $($executionContext.SessionState.Path.CurrentLocation)$('>' * ($nestedPromptLevel + 1)) " } }
+        Set-Item function:global:prompt -Value $script:PromptWrapper
+    }
+}
+
+function Remove-PromptHook {
+    if ($script:OriginalPrompt) {
+        Set-Item function:global:prompt -Value $script:OriginalPrompt
+        $script:OriginalPrompt = $null
+    }
+    $script:TabSequence = $null
+}
+
 # ---------- preferences ----------
 
 # defaultLook: what `look` and the Retro Looks profile open; colors: each look's default color;
@@ -341,12 +369,42 @@ function Get-DefaultLookId([hashtable]$Prefs) {
 
 # Writes the Windows Terminal fragment: a hidden profile per look (what `look` opens) and the visible
 # Retro Looks profile, a copy of the default look. Terminal reads it when it starts.
+# The Terminal color scheme for a look's default color: one of the shipped preset schemes if it matches,
+# or else a new "<look> Custom" scheme. Returns @{ name; new } (new: the scheme to add, if any).
+function Get-DefaultColorScheme($Entry, [string]$Spec, [string]$CurrentScheme, $Schemes) {
+    $parsed = ConvertFrom-ColorSpec $Spec
+    if ($parsed.Phosphor -and $Entry.monochrome) {
+        foreach ($preset in (Get-PaletteData).presets.PSObject.Properties) {
+            $name = "$($Entry.name) " + $preset.Name.Substring(0, 1).ToUpper() + $preset.Name.Substring(1)
+            if ($preset.Value -eq $parsed.Phosphor -and ($Schemes | Where-Object { $_.name -eq $name })) {
+                return @{ name = $name; new = $null }
+            }
+        }
+    }
+    $custom = [ordered]@{ name = "$($Entry.name) Custom" }
+    if ($parsed.Phosphor) {
+        $colors = Get-RetroScheme $Entry.colorStyle $parsed.Phosphor
+        foreach ($key in $colors.Keys | Sort-Object) { $custom[$key] = $colors[$key] }
+    } else {
+        # A DOS code with a background: the look's own colors, with DOS's text and background.
+        $base = $Schemes | Where-Object { $_.name -eq $CurrentScheme }
+        foreach ($p in $base.PSObject.Properties) { if ($p.Name -ne 'name') { $custom[$p.Name] = $p.Value } }
+        $custom.foreground = $parsed.Foreground
+        $custom.cursorColor = $parsed.Foreground
+        $custom.background = $parsed.Background
+    }
+    return @{ name = $custom.name; new = [pscustomobject]$custom }
+}
+
 function Write-RetroFragment([hashtable]$Prefs) {
     $shell = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { 'pwsh.exe' } else { 'powershell.exe' }
     $pixelsPerEm = @{}
     foreach ($font in Get-RetroFont) { if ($font.pixelsPerEm) { $pixelsPerEm[$font.family] = [int]$font.pixelsPerEm } }
     $fragment = Get-Content (Join-Path $script:ModuleRoot 'retro-looks.json') -Raw | ConvertFrom-Json
     $dpi = Get-DisplayDpi
+    $schemes = @($fragment.schemes)
+    $looksByGuid = @{}
+    foreach ($entry in Get-LookData) { $looksByGuid[$entry.guid] = $entry }
     foreach ($terminalProfile in $fragment.profiles) {
         # Each tab applies its saved color (and a color handed over by `look -Color`) when it opens.
         $terminalProfile | Add-Member -NotePropertyName commandline -NotePropertyValue "$shell -NoLogo -NoExit -Command Initialize-RetroTab" -Force
@@ -355,7 +413,17 @@ function Write-RetroFragment([hashtable]$Prefs) {
         if ($grid -and -not $Prefs.keepFontSizes) {
             $terminalProfile.font.size = Get-SharpPoints $terminalProfile.font.size $grid $dpi
         }
+        # Windows Terminal resets colors set by programs to the profile's scheme, e.g. when the input
+        # language changes (microsoft/terminal#11522). So the profile uses the scheme of the look's default
+        # color, and a reset lands on the user's color rather than the built-in one.
+        $entry = $looksByGuid[$terminalProfile.guid]
+        if ($entry -and $Prefs.colors[$entry.id]) {
+            $scheme = Get-DefaultColorScheme $entry $Prefs.colors[$entry.id] $terminalProfile.colorScheme $schemes
+            if ($scheme.new) { $schemes += $scheme.new }
+            $terminalProfile.colorScheme = $scheme.name
+        }
     }
+    $fragment.schemes = $schemes
 
     $defaultLook = Find-RetroLook (Get-DefaultLookId $Prefs)
     $source = $fragment.profiles | Where-Object { $_.guid -eq $defaultLook.guid }
@@ -435,27 +503,41 @@ function Set-RetroColor {
         throw "-SetAsDefault works in a Retro Looks tab (open one with Set-RetroLook, alias look)."
     }
 
+    $prefs = Get-RetroPreference
     if (-not $Color) {
-        $prefs = Get-RetroPreference
         if ($SetAsDefault) {
             $prefs.colors.Remove($look.id)
-            Save-RetroPreference $prefs
+            Save-DefaultColor $prefs $look
         }
         Write-TerminalSequence $script:ResetSequence
+        $sequence = $null
         if ($look -and $prefs.colors[$look.id]) {
-            Write-TerminalSequence (Get-SpecSequence (ConvertFrom-ColorSpec $prefs.colors[$look.id]) $look)
+            $sequence = Get-SpecSequence (ConvertFrom-ColorSpec $prefs.colors[$look.id]) $look
+            Write-TerminalSequence $sequence
         }
+        Set-TabColorState $sequence
         return
     }
 
     $parsed = ConvertFrom-ColorSpec $Color
-    if (-not $parsed.Phosphor) { Write-TerminalSequence $script:ResetSequence }
-    Write-TerminalSequence (Get-SpecSequence $parsed $look)
+    $sequence = Get-SpecSequence $parsed $look
+    if (-not $parsed.Phosphor) { $sequence = $script:ResetSequence + $sequence }
+    Write-TerminalSequence $sequence
+    Set-TabColorState $sequence
     if ($SetAsDefault) {
-        $prefs = Get-RetroPreference
         $prefs.colors[$look.id] = $parsed.Stored
-        Save-RetroPreference $prefs
+        Save-DefaultColor $prefs $look
         Write-Host "New $($look.name) tabs will open in $($parsed.Stored)."
+    }
+}
+
+# Saves a look's default color, and puts it in the look's Windows Terminal profile too, so that Terminal's
+# own color resets land on it (after Terminal restarts and reads the profile again).
+function Save-DefaultColor([hashtable]$Prefs, $Look) {
+    Save-RetroPreference $Prefs
+    if (Test-Path (Join-Path $script:FragmentDir 'retro-looks.json')) {
+        Write-RetroFragment $Prefs
+        Write-Host "Restart Windows Terminal for $($Look.name)'s profile to use it too (so Terminal's own color resets, e.g. when you switch input languages, return to it)."
     }
 }
 
@@ -494,7 +576,11 @@ function Initialize-RetroTab {
         Remove-Item $pending -Force -ErrorAction SilentlyContinue
     }
     if (-not $spec) { $spec = $prefs.colors[$target.id] }
-    if ($spec) { Write-TerminalSequence (Get-SpecSequence (ConvertFrom-ColorSpec $spec) $target) }
+    if ($spec) {
+        $sequence = Get-SpecSequence (ConvertFrom-ColorSpec $spec) $target
+        Write-TerminalSequence $sequence
+        Set-TabColorState $sequence
+    }
 }
 
 function Set-RetroLook {
@@ -660,6 +746,7 @@ function Uninstall-RetroLooks {
     foreach ($file in 'terminal.json', 'pending-color') {
         Remove-Item (Join-Path $script:DataDir $file) -Force -ErrorAction SilentlyContinue
     }
+    Remove-PromptHook
     Write-Host 'Removed the Retro Looks from Windows Terminal.'
 
     Remove-FontMarker

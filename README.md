@@ -86,6 +86,10 @@ clicking. Pixel fonts are sized for your display scaling so they stay sharp (`-K
 that). Nothing needs admin rights, and your `settings.json` isn't touched: the looks are added as a
 [Terminal fragment](https://learn.microsoft.com/windows/terminal/json-fragment-extensions).
 
+Windows Terminal resets colors set this way when you switch input languages (a known Terminal bug). A tab
+re-applies its color at the next prompt, and after `color ... -SetAsDefault` and a Terminal restart, resets
+land on your default color.
+
 Programs that use exact RGB colors ("true color") bypass the palette, so `color` can't recolor those
 parts; Claude Code, for example, has an ANSI-colors-only theme in `/theme`.
 

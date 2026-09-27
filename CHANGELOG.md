@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+
+- **Windows Terminal: tab colors survive Terminal's own color resets.** Windows Terminal throws away colors
+  set by `color` when you switch input languages (a known Terminal bug, microsoft/terminal#11522). A tab
+  now re-sends its color with every prompt, so it's back as soon as you press Enter, and each look's
+  Terminal profile uses your default color, so a reset lands on it (after a Terminal restart).
+
 ## 0.2.0
 
 - **Pick your phosphor color.** Apple //e is now one look in the color of your choice: green, amber,
