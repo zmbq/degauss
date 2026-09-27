@@ -9,7 +9,9 @@
 # Works on Windows PowerShell 5.1 and PowerShell 7.
 param(
     [switch]$Uninstall,
-    [string]$Version = 'latest'
+    [string]$Version = 'latest',
+    # Use the profiles' nominal font sizes instead of the sharpest sizes for this display's scaling.
+    [switch]$KeepFontSizes
 )
 
 $ErrorActionPreference = 'Stop'
@@ -60,12 +62,28 @@ function Get-ReleasePayload {
     return $dir
 }
 
+# Pixel fonts are only sharp when each font pixel covers a whole number of screen pixels
+# (screen pixels = points * dpi / 72). Pick the sharp size closest to the nominal one.
+# Keep in sync with sharpPoints() in extension/extension.js.
+function Get-SharpPoints([double]$Points, [int]$PixelsPerEm, [int]$Dpi) {
+    $multiple = [math]::Max(1, [math]::Round($Points * $Dpi / 72 / $PixelsPerEm, [MidpointRounding]::AwayFromZero))
+    return [math]::Round($multiple * $PixelsPerEm * 72 / $Dpi, 3)
+}
+
+function Get-DisplayDpi {
+    $metrics = Get-ItemProperty 'HKCU:\Control Panel\Desktop\WindowMetrics' -Name AppliedDPI -ErrorAction SilentlyContinue
+    if ($metrics -and $metrics.AppliedDPI -gt 0) { return [int]$metrics.AppliedDPI }
+    return 96
+}
+
 function Install-RetroLooks([string]$Source) {
     New-Item -ItemType Directory -Force $FontDir, $FragmentDir | Out-Null
     if (-not (Test-Path $FontKey)) { New-Item $FontKey -Force | Out-Null }
 
+    $pixelsPerEm = @{}
     foreach ($meta in Get-ChildItem (Join-Path $Source 'fonts') -Recurse -Filter 'font.json') {
         $font = Get-Content $meta.FullName -Raw | ConvertFrom-Json
+        if ($font.pixelsPerEm) { $pixelsPerEm[$font.family] = [int]$font.pixelsPerEm }
         $src = Join-Path $meta.DirectoryName $font.file
         $dest = Join-Path $FontDir ($FontFilePrefix + $font.file)
         # Installed fonts may be locked by running apps; identical files don't need copying.
@@ -78,8 +96,13 @@ function Install-RetroLooks([string]$Source) {
 
     $shell = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { 'pwsh.exe -NoLogo' } else { 'powershell.exe -NoLogo' }
     $fragment = Get-Content (Join-Path $Source 'retro-looks.json') -Raw | ConvertFrom-Json
+    $dpi = Get-DisplayDpi
     foreach ($terminalProfile in $fragment.profiles) {
         $terminalProfile | Add-Member -NotePropertyName commandline -NotePropertyValue $shell -Force
+        $grid = $pixelsPerEm[$terminalProfile.font.face]
+        if ($grid -and -not $KeepFontSizes) {
+            $terminalProfile.font.size = Get-SharpPoints $terminalProfile.font.size $grid $dpi
+        }
     }
     $json = $fragment | ConvertTo-Json -Depth 10
     [IO.File]::WriteAllText((Join-Path $FragmentDir 'retro-looks.json'), $json, (New-Object Text.UTF8Encoding $false))

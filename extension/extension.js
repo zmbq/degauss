@@ -23,19 +23,31 @@ function run(command, args) {
 
 // ---------- font size ----------
 
-// Screen pixels per CSS pixel: Windows display scaling times VS Code's own zoom (each zoom level is 20%).
-// Other platforms don't expose the scaling to extensions, so they assume 1.
-async function displayScale() {
-  let scale = 1;
-  if (isWindows) {
-    try {
-      const out = await run('reg', ['query', 'HKCU\\Control Panel\\Desktop\\WindowMetrics', '/v', 'AppliedDPI']);
-      const dpi = parseInt(out.match(/REG_DWORD\s+0x([0-9a-f]+)/i)?.[1] ?? '', 16);
-      if (dpi > 0) scale = dpi / 96;
-    } catch { /* keep 1 */ }
+const pixelPerfect = () => vscode.workspace.getConfiguration('retroLooks').get('pixelPerfectFontSize');
+
+// The Windows display DPI (96 = 100% scaling). Other platforms don't expose it to extensions: 96.
+async function windowsDpi() {
+  if (!isWindows) return 96;
+  try {
+    const out = await run('reg', ['query', 'HKCU\\Control Panel\\Desktop\\WindowMetrics', '/v', 'AppliedDPI']);
+    const dpi = parseInt(out.match(/REG_DWORD\s+0x([0-9a-f]+)/i)?.[1] ?? '', 16);
+    return dpi > 0 ? dpi : 96;
+  } catch {
+    return 96;
   }
+}
+
+// Screen pixels per CSS pixel: display scaling times VS Code's own zoom (each zoom level is 20%).
+async function displayScale() {
   const zoomLevel = vscode.workspace.getConfiguration('window').get('zoomLevel') ?? 0;
-  return scale * Math.pow(1.2, zoomLevel);
+  return ((await windowsDpi()) / 96) * Math.pow(1.2, zoomLevel);
+}
+
+// Windows Terminal sizes fonts in points (screen pixels = points * dpi / 72); pick the sharp size
+// closest to the nominal one, like sizesFor() does for VS Code. Keep in sync with install.ps1.
+function sharpPoints(points, pixelsPerEm, dpi) {
+  const multiple = Math.max(1, Math.round((points * dpi) / 72 / pixelsPerEm));
+  return Math.round(((multiple * pixelsPerEm * 72) / dpi) * 1000) / 1000;
 }
 
 // Pixel fonts are only sharp when each font pixel covers a whole number of screen pixels, so pick the
@@ -48,7 +60,7 @@ async function displayScale() {
 async function sizesFor(look) {
   const target = look.vscode.fontSize;
   const grid = look.font.pixelsPerEm;
-  if (!grid || !vscode.workspace.getConfiguration('retroLooks').get('pixelPerfectFontSize')) {
+  if (!grid || !pixelPerfect()) {
     return { fontSize: target, lineHeight: 0 };
   }
   const scale = await displayScale();
@@ -190,7 +202,8 @@ async function install() {
   }
   const { fontDir, fragmentDir } = windowsPaths();
   fs.mkdirSync(fontDir, { recursive: true });
-  for (const font of readJson(generated('fonts.json'))) {
+  const fonts = readJson(generated('fonts.json'));
+  for (const font of fonts) {
     const source = generated('fonts', font.id, font.file);
     const dest = path.join(fontDir, font.installedFile);
     // Installed fonts may be locked by running apps; identical files don't need copying.
@@ -200,7 +213,12 @@ async function install() {
 
   const fragment = readJson(generated('terminal', 'retro-looks.json'));
   const commandline = await shellCommandline();
-  for (const profile of fragment.profiles) profile.commandline = commandline;
+  const dpi = await windowsDpi();
+  for (const profile of fragment.profiles) {
+    profile.commandline = commandline;
+    const grid = fonts.find((f) => f.family === profile.font.face)?.pixelsPerEm;
+    if (grid && pixelPerfect()) profile.font.size = sharpPoints(profile.font.size, grid, dpi);
+  }
   fs.mkdirSync(fragmentDir, { recursive: true });
   fs.writeFileSync(path.join(fragmentDir, 'retro-looks.json'), JSON.stringify(fragment, null, 2));
 

@@ -38,7 +38,8 @@ Paste this into PowerShell:
 irm https://github.com/zmbq/vscode-retro/releases/latest/download/install.ps1 | iex
 ```
 
-Then close all Windows Terminal windows and reopen it. The looks appear as new profiles in the
+The installer sizes the pixel fonts for your display scaling so they stay sharp (add `-KeepFontSizes`
+to the script to skip that). Then close all Windows Terminal windows and reopen it. The looks appear as new profiles in the
 drop-down next to the **+** tab button. Nothing needs admin rights, and your `settings.json` isn't
 touched: the profiles are added as a [Terminal fragment](https://learn.microsoft.com/windows/terminal/json-fragment-extensions).
 

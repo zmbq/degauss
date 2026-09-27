@@ -8,4 +8,5 @@ First public release.
 - VS Code: themes, look switcher that also sets fonts, and "Retro: Off" to restore your previous setup.
 - Windows: one-command font and Windows Terminal profile installer, from VS Code or PowerShell.
 - VS Code reminds you at startup if the fonts aren't installed yet (with "Don't Show Again").
-- Pixel fonts are sized for your display scaling so they stay sharp (`retroLooks.pixelPerfectFontSize`).
+- Pixel fonts are sized for your display scaling so they stay sharp, in VS Code (`retroLooks.pixelPerfectFontSize`)
+  and in the Windows Terminal profiles (`install.ps1 -KeepFontSizes` to opt out).

@@ -150,6 +150,7 @@ function buildExtension(allLooks, fonts) {
   }));
   writeJson(path.join(gen, 'fonts.json'), Object.values(fonts).map((f) => ({
     id: f.id, family: f.family, file: f.file, installedFile: FONT_FILE_PREFIX + f.file, registryName: registryName(f.family),
+    pixelsPerEm: f.pixelsPerEm ?? null,
   })));
 
   // Marketplace files live at the repo root; vsce needs them next to package.json.
