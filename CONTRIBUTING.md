@@ -103,7 +103,18 @@ If you're not sure, say so in the PR, and someone who used one will know.
 Retro Looks is Windows-first. Fonts are installed for the whole system, so once they're installed,
 VS Code and every terminal can use them. What differs per terminal is the color schemes and profiles.
 
-**Next (v0.2.0): macOS and Linux fonts and VS Code**
+**Next (v0.2.0): pick your phosphor color**
+
+Some 80-column cards and monitors let you choose the text color. Retro Looks will too:
+- **Apple //e** becomes a single look whose color you choose: presets green, amber, white, cyan and
+  yellow, or any custom RGB color. One choice colors both VS Code and the Windows Terminal profile
+  (`install.ps1 -Phosphor …` for Terminal-only users).
+- **IBM PS/2 monochrome** (Windows Terminal): the IBM 8503 monochrome VGA display, where the 16 VGA
+  colors show as shades of gray.
+- **IBM 3270 monochrome**: the green-only 3278 display, where ISPF's colors collapse into normal and
+  intensified green.
+
+**Then (v0.3.0): macOS and Linux fonts and VS Code**
 - The extension installs, detects and uninstalls the fonts on macOS (`~/Library/Fonts`) and Linux
   (`~/.local/share/fonts` + `fc-cache`), with the same startup reminder as on Windows.
 - An `install.sh` (`curl … | sh`) installs just the fonts, for people who don't use VS Code.

@@ -24,7 +24,7 @@ Install **Retro Looks** from the Marketplace (or Open VSX), then open the Comman
   **Retro: Install Fonts and Windows Terminal Profiles**, which installs the fonts plus the
   Windows Terminal profiles.
 - On macOS and Linux, run **Retro: Open Bundled Fonts Folder** and install the fonts with your
-  system's font installer. Automatic installation there is next on the [roadmap](CONTRIBUTING.md#roadmap-and-where-help-is-wanted).
+  system's font installer. Automatic installation there is on the [roadmap](CONTRIBUTING.md#roadmap-and-where-help-is-wanted).
 - Works in Remote SSH, WSL and container windows: the extension runs on your local machine.
 
 The themes are also available on their own through the normal theme picker (`Ctrl+K Ctrl+T`), and
