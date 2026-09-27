@@ -8,11 +8,11 @@ and puts your own setup back when you're done.
 
 ## The looks
 
-| Look | Font | What it looks like |
-|---|---|---|
-| **Apple //e** | PR Number 3, the //e 80-column font | A monochrome monitor in the phosphor color of your choice |
-| **IBM 3270** | IBM 3270 | A mainframe color terminal with the default ISPF editor highlighting: green text, turquoise comments, red keywords, white strings, blue directives, yellow operators |
-| **IBM 3270 Monochrome** | IBM 3270 | A 3278-style monochrome terminal: ISPF's colors become normal and intensified text, in the phosphor color of your choice |
+| Look                          | Font                         | What it looks like                                                                                                                                                   |
+| ----------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Apple //e**           | The Apple //e 80-column font | A monochrome monitor in the phosphor color of your choice                                                                                                            |
+| **IBM 3270**            | IBM 3270                     | A mainframe color terminal with the default ISPF editor highlighting: green text, turquoise comments, red keywords, white strings, blue directives, yellow operators |
+| **IBM 3270 Monochrome** | IBM 3270                     | A 3278-style monochrome terminal: ISPF's colors become normal and intensified text, in the phosphor color of your choice                                             |
 
 ![Apple //e in green](https://raw.githubusercontent.com/zmbq/vscode-retro/main/docs/images/apple2e-green.png)
 
@@ -52,47 +52,32 @@ your display scaling (and VS Code's zoom level) and picks the sharp font size cl
 size, with a line height to match: for example 21.333 with 28-pixel lines at 150% scaling. Turn this
 off with `retroLooks.pixelPerfectFontSize`.
 
-## Works everywhere you do
-
-The extension runs on your local machine, so the looks work the same in Remote SSH, WSL and container
-windows. VS Code's built-in terminal follows the look too.
-
-## Windows Terminal
-
-Want the same looks in Windows Terminal? That's a separate part of Retro Looks, a PowerShell module,
-with `look` and `color` commands (`look apple -Color amber`, `color 0A`) and IBM PS/2 looks too. See
-[Retro Looks for Windows Terminal](https://github.com/zmbq/vscode-retro#windows-terminal). It shares the
-fonts with the extension, and neither removes fonts the other still uses.
-
 ## Uninstalling
 
 **Run Retro: Off before you uninstall.** It restores your theme, fonts and settings. The extension can't
 do that once it's uninstalled: VS Code would fall back to its default theme and leave the retro font
 size, line height and cursor in your settings.
 
-Uninstalling the extension removes its fonts too (the next time VS Code starts), unless Retro Looks for
-Windows Terminal still uses them. Forgot to turn it off? Reinstall the extension
-and run **Retro: Off**: it still remembers your original settings.
+Uninstalling the extension removes its fonts too (the next time VS Code starts). Forgot to turn it off?
+Reinstall the extension and run **Retro: Off**: it still remembers your original settings.
 
 ## Commands
 
-| Command | What it does |
-|---|---|
-| Retro: Choose Look… | Pick a look (and a color, for monochrome looks) |
-| Retro: Apple //e, Retro: IBM 3270, … | Apply a look directly, in its remembered color |
-| Retro: Set Phosphor Color… | Change the color of the active monochrome look |
-| Retro: Off | Put your own theme, fonts and settings back |
-| Retro: Install Fonts | Install the fonts (Windows; only shown while they're missing) |
-| Retro: Open Bundled Fonts Folder | Open the fonts, to install them by hand on macOS or Linux |
+| Command                               | What it does                                                  |
+| ------------------------------------- | ------------------------------------------------------------- |
+| Retro: Choose Look…                  | Pick a look (and a color, for monochrome looks)               |
+| Retro: Apple //e, Retro: IBM 3270, … | Apply a look directly, in its remembered color                |
+| Retro: Set Phosphor Color…           | Change the color of the active monochrome look                |
+| Retro: Off                            | Put your own theme, fonts and settings back                   |
+| Retro: Install Fonts                  | Install the fonts (Windows; only shown while they're missing) |
+| Retro: Open Bundled Fonts Folder      | Open the fonts, to install them by hand on macOS or Linux     |
 
 The themes are also available on their own in the normal theme picker (`Ctrl+K Ctrl+T`), and you can use
 the fonts with any theme.
 
-## macOS and Linux
+## Mac and Linux
 
-The looks work, but the fonts aren't installed automatically yet: run **Retro: Open Bundled Fonts
-Folder** and install them with your system's font installer. Automatic installation is next on the
-[roadmap](https://github.com/zmbq/vscode-retro/blob/main/CONTRIBUTING.md#roadmap-and-where-help-is-wanted).
+At this early stage, the extension has only been tested on Windows. Mac and Linux will follow.
 
 ## Credits
 
