@@ -6,8 +6,8 @@
   `Set-DegaussLook` (`look`), `Set-DegaussColor` (`color`), `Get-DegaussLook`, `Install-Degauss` and
   `Uninstall-Degauss`. The Windows Terminal profile is called Degauss, and the fonts are installed as
   `Degauss-*.ttf`.
-- **`degauss`** (`Invoke-Degauss`), like the button on a CRT monitor: the relay's *thunk*, the coil's
-  hum, and a second of swirling colors. Like the real thing, it also fixes the colors: the tab is back to
+- **`degauss`** (`Invoke-Degauss`), like the button on a CRT monitor: the relay's *thunk* and the coil's
+  hum (recorded from a real CRT), and a second of swirling colors. Like the real thing, it also fixes the colors: the tab is back to
   its own colors afterwards, including ones Windows Terminal threw away. `-Quiet` skips the sound.
 
 ## 0.2.1

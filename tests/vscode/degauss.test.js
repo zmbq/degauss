@@ -11,14 +11,18 @@ const played = [];
 options.play = (file) => played.push(file);
 options.frameMs = 0;
 
-test('the build generates the degauss sound for both products', () => {
+test('both products ship the recorded degauss sound', () => {
   const root = path.join(EXTENSION_DIR, '..');
   const wav = fs.readFileSync(path.join(EXTENSION_DIR, 'generated', 'degauss.wav'));
   assert.strictEqual(wav.toString('ascii', 0, 4), 'RIFF');
   assert.strictEqual(wav.toString('ascii', 8, 12), 'WAVE');
   const seconds = wav.readUInt32LE(40) / wav.readUInt32LE(28);
   assert(seconds > 1 && seconds < 3, `about two seconds long (${seconds})`);
+  assert(wav.equals(fs.readFileSync(path.join(root, 'sounds', 'degauss', 'degauss.wav'))), 'copied unchanged from sounds/degauss');
   assert(wav.equals(fs.readFileSync(path.join(root, 'dist', 'powershell', 'Degauss', 'degauss.wav'))), 'the module gets the same sound');
+  for (const notices of [path.join(EXTENSION_DIR, 'THIRD-PARTY-NOTICES.md'), path.join(root, 'dist', 'powershell', 'Degauss', 'THIRD-PARTY-NOTICES.md')]) {
+    assert(fs.readFileSync(notices, 'utf8').includes('by Sanderboah -- https://freesound.org/s/838728/ -- License: Creative Commons 0'), `the recording is credited in ${notices}`);
+  }
 });
 
 test('the disturbance starts strong and dies away', () => {

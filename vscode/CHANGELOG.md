@@ -4,8 +4,8 @@
 
 - **Renamed from Retro Looks to Degauss.** The extension is now `zmbq.degauss`; commands are
   **Degauss: …** and settings `degauss.*` (formerly `retroLooks.*`). Fonts are installed as `Degauss-*.ttf`.
-- **Degauss: Degauss!**, like the button on a CRT monitor: the relay's *thunk*, the coil's hum, and a second
-  of wobbling, swirling colors in the editor.
+- **Degauss: Degauss!**, like the button on a CRT monitor: the relay's *thunk* and the coil's hum
+  (recorded from a real CRT), and a second of wobbling, swirling colors in the editor.
 
 ## 0.2.1
 

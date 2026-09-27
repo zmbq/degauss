@@ -85,8 +85,9 @@ At this early stage, the extension has only been tested on Windows. Mac and Linu
 The fonts are the work of their authors and keep their own licenses (see THIRD-PARTY-NOTICES.md):
 **PR Number 3** by Kreative Software, **PxPlus IBM VGA 9x16** by VileR
 ([The Ultimate Oldschool PC Font Pack](https://int10h.org/oldschool-pc-fonts/)), and **IBM 3270** by
-Ricardo Bánffy and contributors ([3270font](https://github.com/rbanffy/3270font)). The ISPF colors follow
-IBM's *ISPF Edit and Edit Macros* manual.
+Ricardo Bánffy and contributors ([3270font](https://github.com/rbanffy/3270font)). The degauss sound is
+[a recording of a Compaq CRT monitor](https://freesound.org/people/Sanderboah/sounds/838728/) by Sanderboah
+(CC0). The ISPF colors follow IBM's *ISPF Edit and Edit Macros* manual.
 
 Want another machine, like a Commodore 64 or a classic Mac?
 [Contributions are welcome](https://github.com/zmbq/degauss/blob/main/CONTRIBUTING.md).

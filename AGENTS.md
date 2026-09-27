@@ -14,8 +14,8 @@ matching color schemes. People will often ask you to **add a new look** ("add a 
   brightness levels, like the IBM 3278); `${slot}` placeholders are filled by `phosphorPalette()`.
 - `vscode/palette.js`: the color presets and the palette math, shared by the build and the extension
   (which recolors monochrome looks at runtime with the user's chosen color).
-- The degauss effect (**Degauss: Degauss!**, `degauss`): `tools/degauss-sound.mjs` synthesizes the sound at build time
-  (no recording, so no license to track); the effect is `vscode/degauss.js` in VS Code (temporary editor
+- The degauss effect (**Degauss: Degauss!**, `degauss`): the sound is `sounds/degauss/degauss.wav`, cut from a
+  CC0 recording of a real CRT (source and edits in `sounds/degauss/README.md`); the effect is `vscode/degauss.js` in VS Code (temporary editor
   decorations, never settings) and `Invoke-Degauss` in the module (color escape sequences).
 - `vscode/`: **project 1**, the VS Code extension. `extension.js` is hand-written; `package.json`'s
   `contributes` and all of `vscode/generated/` are produced by the build. Never edit those by hand.

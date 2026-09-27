@@ -1,7 +1,7 @@
 // Degauss: Degauss!. Pressing a CRT's degauss button made the picture wobble and swirl with color for a
 // second, with a loud hum. VS Code doesn't let extensions bend the whole window, so this wobbles and tints
 // the visible editors with temporary decorations (nothing is written to settings) while the system plays
-// the sound (generated/degauss.wav, synthesized by tools/degauss-sound.mjs).
+// the sound (generated/degauss.wav, a recording of a real CRT: sounds/degauss/).
 const { execFile } = require('child_process');
 
 // Replaceable by the tests.

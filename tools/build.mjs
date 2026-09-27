@@ -11,7 +11,6 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { degaussWav } from './degauss-sound.mjs';
 
 // The color math is shared with the extension, which recolors monochrome looks at runtime.
 const { PRESETS, VGA, MIN_PEAK, resolveColor, phosphorPalette, fillTemplate } = createRequire(import.meta.url)('../vscode/palette.js');
@@ -28,6 +27,9 @@ const writeJson = (file, data) => {
 // The PowerShell module and the extension read them from the generated fonts.json.
 const FONT_FILE_PREFIX = 'Degauss-';
 const registryName = (family) => `${family} (TrueType)`;
+
+// A recording of a real CRT degaussing (CC0; source and edits in sounds/degauss/README.md).
+const DEGAUSS_SOUND = p('sounds', 'degauss', 'degauss.wav');
 
 // ---------- monochrome looks ----------
 
@@ -98,10 +100,13 @@ function copyFonts(fonts, destRoot) {
 }
 
 function thirdPartyNotices(fonts) {
-  const lines = ['# Third-party notices', '', 'The fonts bundled with Degauss are the work of their authors and keep their own licenses.', ''];
+  const lines = ['# Third-party notices', '', 'The fonts and the sound bundled with Degauss are the work of their authors and keep their own licenses.', ''];
   for (const f of Object.values(fonts)) {
     lines.push(`## ${f.family}`, '', `- Author: ${f.author}`, `- Source: ${f.url}`, `- License: ${f.licenseName}`, `- Full license text: fonts/${f.id}/${f.license}`, '');
   }
+  lines.push('## The degauss sound', '', 'Cut from a recording of a real CRT monitor degaussing:', '',
+    'Computer CRT monitor turn on/off/degauss by Sanderboah -- https://freesound.org/s/838728/ -- License: Creative Commons 0',
+    '', 'Creative Commons 0 (CC0 1.0 Universal) is a public domain dedication: https://creativecommons.org/publicdomain/zero/1.0/', '');
   return lines.join('\n');
 }
 
@@ -123,7 +128,7 @@ function buildVscode(allLooks, fonts) {
   }
   copyFonts(fonts, path.join(gen, 'fonts'));
   writeJson(path.join(gen, 'fonts.json'), fontList(fonts));
-  fs.writeFileSync(path.join(gen, 'degauss.wav'), degaussWav());
+  fs.copyFileSync(DEGAUSS_SOUND, path.join(gen, 'degauss.wav'));
   writeJson(path.join(gen, 'looks.json'), looks.map((l) => {
     const f = fonts[l.font];
     return {
@@ -223,7 +228,7 @@ function buildPowerShell(looks, fonts) {
   fs.copyFileSync(p('powershell', 'Degauss', 'Degauss.psd1'), path.join(moduleDir, 'Degauss.psd1'));
   fs.copyFileSync(p('powershell', 'CHANGELOG.md'), path.join(moduleDir, 'CHANGELOG.md'));
   copyFonts(fonts, path.join(moduleDir, 'fonts'));
-  fs.writeFileSync(path.join(moduleDir, 'degauss.wav'), degaussWav());
+  fs.copyFileSync(DEGAUSS_SOUND, path.join(moduleDir, 'degauss.wav'));
   writeJson(path.join(moduleDir, 'fonts.json'), fontList(fonts));
   writeJson(path.join(moduleDir, 'degauss.json'), terminalFragment(looks, fonts));
 

@@ -17,9 +17,9 @@ fonts/<font-id>/        one folder per font
   font.json             family name, file, author, source URL, license name
   <font>.ttf
   LICENSE.txt           the font's license, verbatim
+sounds/degauss/         the degauss sound, a recording of a real CRT (CC0; README.md has the source)
 tools/build.mjs         generates everything else
 tools/templates/        templates monochrome looks are generated from
-tools/degauss-sound.mjs synthesizes the degauss sound
 vscode/                 project 1: the VS Code extension (palette.js: color presets and palette math)
 powershell/             project 2: the Degauss PowerShell module for Windows Terminal,
   Degauss/             the module itself

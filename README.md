@@ -154,6 +154,9 @@ and are redistributed under their own licenses, included next to each font in [f
 - **PxPlus IBM VGA 9x16**, VileR, [The Ultimate Oldschool PC Font Pack](https://int10h.org/oldschool-pc-fonts/), [CC BY-SA 4.0](fonts/pxplus-ibm-vga-9x16/LICENSE.txt)
 - **IBM 3270**, Ricardo Bánffy and contributors, [3270font](https://github.com/rbanffy/3270font), [BSD 3-Clause](fonts/ibm-3270/LICENSE.txt)
 
+The degauss sound is cut from [a recording of a Compaq CRT monitor](https://freesound.org/people/Sanderboah/sounds/838728/)
+by Sanderboah on Freesound, dedicated to the public domain ([CC0](https://creativecommons.org/publicdomain/zero/1.0/)).
+
 The ISPF colors follow the defaults documented in IBM's *ISPF Edit and Edit Macros* manual.
 
 Degauss is a fan project. It is not affiliated with or endorsed by Apple, IBM or any other
