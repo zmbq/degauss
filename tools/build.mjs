@@ -72,16 +72,17 @@ function loadLooks(fonts) {
     const dir = p('looks', id);
     const look = readJson(path.join(dir, 'look.json'));
     if (!fonts[look.font]) throw new Error(`looks/${id}: unknown font "${look.font}"`);
-    let theme, scheme;
+    // A look without a "vscode" section is Windows Terminal only.
+    let theme = null, scheme;
     if (look.phosphor) {
       const palette = phosphorPalette(look.phosphor);
-      theme = fillTemplate(p('tools', 'templates', 'phosphor-vscode-theme.json'), palette);
+      if (look.vscode) theme = fillTemplate(p('tools', 'templates', 'phosphor-vscode-theme.json'), palette);
       scheme = fillTemplate(p('tools', 'templates', 'phosphor-terminal-scheme.json'), palette);
     } else {
-      theme = readJson(path.join(dir, 'vscode-theme.json'));
+      if (look.vscode) theme = readJson(path.join(dir, 'vscode-theme.json'));
       scheme = readJson(path.join(dir, 'terminal-scheme.json'));
     }
-    return { id, ...look, theme: { name: look.name, ...theme }, scheme: { name: look.name, ...scheme } };
+    return { id, ...look, theme: theme && { name: look.name, ...theme }, scheme: { name: look.name, ...scheme } };
   });
   return looks.sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.id.localeCompare(b.id));
 }
@@ -121,14 +122,17 @@ function copyFonts(fonts, destRoot) {
   }
 }
 
-function buildExtension(looks, fonts) {
+function buildExtension(allLooks, fonts) {
+  // Every font is bundled (the extension also installs the Terminal-only looks), but only looks with
+  // a "vscode" section get a theme and a command.
+  const looks = allLooks.filter((l) => l.vscode);
   const ext = p('extension');
   const gen = path.join(ext, 'generated');
   fs.rmSync(gen, { recursive: true, force: true });
 
   for (const l of looks) writeJson(path.join(gen, 'themes', `${l.id}.json`), l.theme);
   copyFonts(fonts, path.join(gen, 'fonts'));
-  writeJson(path.join(gen, 'terminal', 'retro-looks.json'), terminalFragment(looks, fonts));
+  writeJson(path.join(gen, 'terminal', 'retro-looks.json'), terminalFragment(allLooks, fonts));
   writeJson(path.join(gen, 'looks.json'), looks.map((l) => {
     const f = fonts[l.font];
     return {
@@ -190,4 +194,5 @@ const fonts = loadFonts();
 const looks = loadLooks(fonts);
 const version = buildExtension(looks, fonts);
 buildTerminalZip(looks, fonts, version);
-console.log(`Built ${looks.length} looks (${looks.map((l) => l.name).join(', ')}), ${Object.keys(fonts).length} fonts, version ${version}.`);
+const describe = (l) => (l.vscode ? l.name : `${l.name} [Terminal only]`);
+console.log(`Built ${looks.length} looks (${looks.map(describe).join(', ')}), ${Object.keys(fonts).length} fonts, version ${version}.`);

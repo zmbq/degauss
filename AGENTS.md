@@ -50,7 +50,9 @@ monochrome look, so check them all.
 3. Colors: a monochrome machine gets `"phosphor"`. A color machine gets `vscode-theme.json` (a VS Code
    color theme without `name`) and `terminal-scheme.json` (a Windows Terminal scheme without `name`, with
    all 16 ANSI colors plus `background`, `foreground`, `cursorColor`, `selectionBackground`). Start from
-   `looks/ibm-3270/` or `looks/ibm-ps2-vga/`. Use the machine's real palette and default colors.
+   `looks/ibm-3270/`. Use the machine's real palette and default colors.
+   A look can be **Windows Terminal only**: leave out the `vscode` section and `vscode-theme.json`
+   (see `looks/ibm-ps2-vga/`). Do that when a VS Code theme wouldn't look good yet, rather than shipping an ugly one.
 4. Build, then update `README.md` (the looks table and the font credit).
 
 ## Rules

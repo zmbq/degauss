@@ -7,10 +7,10 @@ from the machines we grew up on.
 |---|---|---|
 | **Apple //e Green** | PR Number 3 (the //e 80-column font) | Green phosphor monitor, like Apple's own Monitor II |
 | **Apple //e Amber** | PR Number 3 | Amber monitor, the popular third-party alternative |
-| **IBM PS/2 VGA** | PxPlus IBM VGA 9x16 | VS Code: blue MS-DOS EDIT / QBasic / Turbo C. Terminal: the black DOS prompt |
+| **IBM PS/2 VGA** *(Windows Terminal only)* | PxPlus IBM VGA 9x16 | The black DOS prompt with the 16 VGA colors |
 | **IBM 3270** | IBM 3270 | Mainframe green screen with the default ISPF editor highlighting |
 
-Want a Commodore 64, a classic Mac or a CP/M machine? [Add it!](CONTRIBUTING.md)
+Want a Commodore 64, a classic Mac or a CP/M machine, or a VS Code version of the PS/2 look? [Add it!](CONTRIBUTING.md)
 
 ## VS Code
 

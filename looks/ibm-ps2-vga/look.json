@@ -1,9 +1,8 @@
 {
   "name": "IBM PS/2 VGA",
   "order": 30,
-  "description": "IBM PS/2 VGA text mode. VS Code gets the blue MS-DOS EDIT / QBasic / Turbo C look, the terminal gets the classic black DOS prompt.",
+  "description": "IBM PS/2 VGA text mode: the classic black DOS prompt. Windows Terminal only for now.",
   "font": "pxplus-ibm-vga-9x16",
-  "vscode": { "fontSize": 16, "cursorStyle": "underline" },
   "terminal": {
     "guid": "{66de10c3-4bbc-48d0-bca1-0aa15bcd1683}",
     "fontSize": 12,

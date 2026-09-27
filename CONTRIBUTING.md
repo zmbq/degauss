@@ -71,8 +71,10 @@ Generated files (`extension/generated`, `dist`) are not committed.
    - **Monochrome monitor:** add `"phosphor": "#RRGGBB"` to `look.json`. The build generates the whole
      VS Code theme and Terminal scheme from that one color (see `tools/templates/`).
    - **Color machine:** add `vscode-theme.json` (a normal VS Code color theme without `name`) and
-     `terminal-scheme.json` (a Windows Terminal scheme without `name`). The existing IBM looks are
-     good starting points.
+     `terminal-scheme.json` (a Windows Terminal scheme without `name`). `looks/ibm-3270/` is a good
+     starting point.
+   - **Windows Terminal only:** leave out the `vscode` section of `look.json` and `vscode-theme.json`,
+     like `looks/ibm-ps2-vga/`. A VS Code version can be added later.
 
 4. **Build and try it:**
 

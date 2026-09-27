@@ -1,7 +1,7 @@
 {
   "name": "vscode-retro",
   "displayName": "Retro Looks",
-  "description": "Vintage computer looks for VS Code and Windows Terminal: Apple //e green and amber, IBM PS/2 VGA and IBM 3270 ISPF, with period fonts.",
+  "description": "Vintage computer looks for VS Code and Windows Terminal: Apple //e green and amber and IBM 3270 ISPF, with period fonts. Windows Terminal also gets IBM PS/2 VGA.",
   "version": "0.1.0",
   "publisher": "zmbq",
   "license": "MIT",
@@ -57,11 +57,6 @@
         "path": "./generated/themes/apple2e-amber.json"
       },
       {
-        "label": "IBM PS/2 VGA",
-        "uiTheme": "vs-dark",
-        "path": "./generated/themes/ibm-ps2-vga.json"
-      },
-      {
         "label": "IBM 3270",
         "uiTheme": "vs-dark",
         "path": "./generated/themes/ibm-3270.json"
@@ -79,10 +74,6 @@
       {
         "command": "retroLooks.apply.apple2e-amber",
         "title": "Retro: Apple //e Amber"
-      },
-      {
-        "command": "retroLooks.apply.ibm-ps2-vga",
-        "title": "Retro: IBM PS/2 VGA"
       },
       {
         "command": "retroLooks.apply.ibm-3270",
