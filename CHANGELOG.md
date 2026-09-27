@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- Fix the Windows Terminal installer (`irm … | iex`) failing with "Checksum mismatch" in PowerShell 7.
+- The installer now removes its downloaded files when it's done.
+
 ## 0.1.0
 
 First public release.

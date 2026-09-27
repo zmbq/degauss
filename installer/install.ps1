@@ -53,7 +53,10 @@ function Get-ReleasePayload {
 
     Write-Host "Downloading Retro Looks ($Version)..."
     Invoke-WebRequest "$base/retro-looks-terminal.zip" -OutFile $zip -UseBasicParsing
-    $expected = ((Invoke-WebRequest "$base/retro-looks-terminal.zip.sha256" -UseBasicParsing).Content -split '\s+')[0]
+    # Save the checksum to a file: PowerShell 7 returns downloaded .sha256 content as bytes, not text.
+    $shaFile = "$zip.sha256"
+    Invoke-WebRequest "$base/retro-looks-terminal.zip.sha256" -OutFile $shaFile -UseBasicParsing
+    $expected = ((Get-Content $shaFile -Raw).Trim() -split '\s+')[0]
     $actual = (Get-FileHash $zip -Algorithm SHA256).Hash
     if ($actual -ne $expected.ToUpper()) { throw "Checksum mismatch for retro-looks-terminal.zip (expected $expected, got $actual)." }
 
@@ -121,5 +124,10 @@ $here = $PSScriptRoot
 if ($here -and (Test-Path (Join-Path $here 'retro-looks.json'))) {
     Install-RetroLooks $here
 } else {
-    Install-RetroLooks (Get-ReleasePayload)
+    $payload = Get-ReleasePayload
+    try {
+        Install-RetroLooks $payload
+    } finally {
+        Remove-Item (Split-Path $payload) -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
