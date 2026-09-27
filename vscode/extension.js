@@ -383,12 +383,17 @@ function activate(context) {
     if (active) applyColor(active).catch((err) => console.error('Retro Looks: recoloring failed', err));
   }));
 
-  migrateOldLooks(context, looks).catch((err) => console.error('Retro Looks: migration failed', err));
-  adoptInstalledFonts()
-    .then(updateFontsContext)
-    .then(() => remindToInstall(context))
-    .catch((err) => console.error('Retro Looks: font check failed', err));
+  // Startup checks run in the background; the tests wait for them through _internal.startup().
+  startup = Promise.all([
+    migrateOldLooks(context, looks).catch((err) => console.error('Retro Looks: migration failed', err)),
+    adoptInstalledFonts()
+      .then(updateFontsContext)
+      .then(() => remindToInstall(context))
+      .catch((err) => console.error('Retro Looks: font check failed', err)),
+  ]);
 }
 
+let startup = Promise.resolve();
+
 // `_internal` is for the tests only.
-module.exports = { activate, deactivate() {}, _internal: { computeSizes } };
+module.exports = { activate, deactivate() {}, _internal: { computeSizes, startup: () => startup } };

@@ -101,14 +101,19 @@ function createFakeVscode() {
           update: async (key, value) => (value === undefined ? globalState.delete(key) : globalState.set(key, value)),
         },
       });
+      fake.extension = extension;
       return extension;
     } finally {
       Module._load = originalLoad;
     }
   };
 
-  // Lets fire-and-forget work (startup tasks, settings listeners) finish.
-  fake.settle = () => new Promise((resolve) => setTimeout(resolve, 200));
+  // Waits for the extension's startup checks (however long the registry takes, e.g. on a slow CI
+  // machine), then lets other fire-and-forget work (settings listeners) finish.
+  fake.settle = async () => {
+    await fake.extension?._internal.startup();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  };
   return fake;
 }
 

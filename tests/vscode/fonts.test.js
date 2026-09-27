@@ -34,7 +34,9 @@ function useSandbox(t) {
     usersDir,
     marker: (name) => path.join(usersDir, name),
     registered: () => fonts.filter((f) => {
-      try { return execFileSync('reg', ['query', key, '/v', f.registryName], { encoding: 'utf8' }).includes(f.installedFile); } catch { return false; }
+      try {
+        return execFileSync('reg', ['query', key, '/v', f.registryName], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).includes(f.installedFile);
+      } catch { return false; }
     }).length,
     runUninstallHook: () => execFileSync(process.execPath, [path.join(EXTENSION_DIR, 'uninstall.js')], { env: process.env }),
   };
@@ -87,8 +89,9 @@ test('fonts installed before markers existed are adopted when the extension star
   await fake.commands['retroLooks.install']();
   fs.rmSync(box.marker('vscode'));
 
-  createFakeVscode().activate();
-  await fake.settle();
+  const restarted = createFakeVscode();
+  restarted.activate();
+  await restarted.settle();
   assert(fs.existsSync(box.marker('vscode')), 'marker added for already installed fonts');
 });
 
