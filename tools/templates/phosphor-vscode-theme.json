@@ -165,7 +165,7 @@
       ],
       "settings": {
         "foreground": "${light2}",
-        "fontStyle": "bold"
+        "fontStyle": ""
       }
     },
     {
@@ -255,7 +255,7 @@
       ],
       "settings": {
         "foreground": "${light2}",
-        "fontStyle": "bold"
+        "fontStyle": ""
       }
     },
     {
