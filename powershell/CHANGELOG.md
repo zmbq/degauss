@@ -1,5 +1,11 @@
 # Changelog: RetroLooks PowerShell module (Windows Terminal)
 
+## 0.3.0 (in progress)
+
+- **`degauss`** (`Invoke-RetroDegauss`), like the button on a CRT monitor: the relay's *thunk*, the coil's
+  hum, and a second of swirling colors. Like the real thing, it also fixes the colors: the tab is back to
+  its own colors afterwards, including ones Windows Terminal threw away. `-Quiet` skips the sound.
+
 ## 0.2.1
 
 - **Tab colors survive Windows Terminal's own color resets.** Windows Terminal throws away colors set by

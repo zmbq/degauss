@@ -27,6 +27,8 @@ Install **Retro Looks** from the Marketplace (or Open VSX), then open the Comman
   **Retro: Set Phosphor Color…**. Each look remembers its own color (in the
   `retroLooks.phosphorColors` setting), and changing it is instant.
 - **Retro: Off** puts back exactly what you had before. Your chosen colors are remembered for next time.
+- **Retro: Degauss** does what the button on a CRT did: *thunk*, a hum, and a second of wobbling,
+  swirling colors in the editor.
 - On Windows, the extension offers to install its fonts when VS Code starts (for your user only,
   no admin needed), until you install them or choose **Don't Show Again**. You can also run
   **Retro: Install Fonts** (shown only while they're missing). Uninstalling the extension removes them
@@ -67,6 +69,8 @@ color amber -SetAsDefault  # new tabs of this look open in amber
 look apple -Color amber -SetAsDefault   # your default look: switches now, and is what `look` alone
                                         # and the Retro Looks profile open
 Get-RetroLook              # list the looks
+degauss                    # thunk, hum, swirling colors (-Quiet for no sound); also brings back
+                           # colors Windows Terminal threw away
 ```
 
 Each tab has its own colors, so an amber and a green Apple //e can sit side by side. `look` needs a new

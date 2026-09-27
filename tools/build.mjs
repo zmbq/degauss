@@ -1,5 +1,5 @@
 // Builds both projects from looks/ and fonts/:
-//   vscode/generated/...                  themes, templates, looks.json, fonts (packaged into the VSIX)
+//   vscode/generated/...                  themes, templates, looks.json, fonts, degauss.wav (packaged into the VSIX)
 //   vscode/package.json                   "contributes" section (themes + commands) is rewritten
 //   dist/powershell/ + dist/retro-looks-powershell.zip (+ .sha256)
 //                                         the RetroLooks PowerShell module (Windows Terminal) and its installer
@@ -11,6 +11,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { degaussWav } from './degauss-sound.mjs';
 
 // The color math is shared with the extension, which recolors monochrome looks at runtime.
 const { PRESETS, VGA, MIN_PEAK, resolveColor, phosphorPalette, fillTemplate } = createRequire(import.meta.url)('../vscode/palette.js');
@@ -122,6 +123,7 @@ function buildVscode(allLooks, fonts) {
   }
   copyFonts(fonts, path.join(gen, 'fonts'));
   writeJson(path.join(gen, 'fonts.json'), fontList(fonts));
+  fs.writeFileSync(path.join(gen, 'degauss.wav'), degaussWav());
   writeJson(path.join(gen, 'looks.json'), looks.map((l) => {
     const f = fonts[l.font];
     return {
@@ -152,6 +154,7 @@ function buildVscode(allLooks, fonts) {
       ...looks.map((l) => ({ command: `retroLooks.apply.${l.id}`, title: `Retro: ${l.name}` })),
       { command: 'retroLooks.setColor', title: 'Retro: Set Phosphor Color…' },
       { command: 'retroLooks.off', title: 'Retro: Off (restore previous look)' },
+      { command: 'retroLooks.degauss', title: 'Retro: Degauss' },
       { command: 'retroLooks.install', title: 'Retro: Install Fonts' },
       { command: 'retroLooks.openFonts', title: 'Retro: Open Bundled Fonts Folder' },
     ],
@@ -220,6 +223,7 @@ function buildPowerShell(looks, fonts) {
   fs.copyFileSync(p('powershell', 'RetroLooks', 'RetroLooks.psd1'), path.join(moduleDir, 'RetroLooks.psd1'));
   fs.copyFileSync(p('powershell', 'CHANGELOG.md'), path.join(moduleDir, 'CHANGELOG.md'));
   copyFonts(fonts, path.join(moduleDir, 'fonts'));
+  fs.writeFileSync(path.join(moduleDir, 'degauss.wav'), degaussWav());
   writeJson(path.join(moduleDir, 'fonts.json'), fontList(fonts));
   writeJson(path.join(moduleDir, 'retro-looks.json'), terminalFragment(looks, fonts));
 

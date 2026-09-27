@@ -6,6 +6,7 @@ const path = require('path');
 const { execFile } = require('child_process');
 const { PRESETS, resolveColor, phosphorPalette, fillTemplate } = require('./palette');
 const retroFonts = require('./fonts');
+const { degauss } = require('./degauss');
 
 const SAVED_KEY = 'retroLooks.saved';
 const ACTIVE_KEY = 'retroLooks.activeLook'; // id of the look applied by the extension, if any
@@ -20,6 +21,16 @@ function run(command, args) {
   return new Promise((resolve, reject) => {
     execFile(command, args, { windowsHide: true }, (err, stdout) => (err ? reject(err) : resolve(stdout)));
   });
+}
+
+// ---------- degauss ----------
+
+// The active Retro look's text color swirls; other themes' text only wobbles.
+function degaussColor(context, looks) {
+  const look = looks.find((l) => l.id === context.globalState.get(ACTIVE_KEY));
+  if (!look) return undefined;
+  if (look.monochrome) return resolveColor(chosenColor(look));
+  return readJson(generated('themes', `${look.id}.json`)).colors?.['editor.foreground'];
 }
 
 // ---------- font size ----------
@@ -373,6 +384,7 @@ function activate(context) {
   register('retroLooks.choose', () => choose(context, looks));
   register('retroLooks.setColor', () => setColor(context, looks));
   register('retroLooks.off', () => restore(context, looks));
+  register('retroLooks.degauss', () => degauss(vscode, { sound: generated('degauss.wav'), color: degaussColor(context, looks) }));
   register('retroLooks.install', () => install());
   register('retroLooks.openFonts', () => openFonts());
 

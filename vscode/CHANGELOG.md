@@ -1,5 +1,10 @@
 # Changelog: Retro Looks for VS Code
 
+## 0.3.0 (in progress)
+
+- **Retro: Degauss**, like the button on a CRT monitor: the relay's *thunk*, the coil's hum, and a second
+  of wobbling, swirling colors in the editor.
+
 ## 0.2.1
 
 - No changes to the extension (released together with the PowerShell module's color-reset fix).

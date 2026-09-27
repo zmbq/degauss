@@ -69,6 +69,7 @@ Reinstall the extension and run **Retro: Off**: it still remembers your original
 | Retro: Apple //e, Retro: IBM 3270, … | Apply a look directly, in its remembered color                |
 | Retro: Set Phosphor Color…           | Change the color of the active monochrome look                |
 | Retro: Off                            | Put your own theme, fonts and settings back                   |
+| Retro: Degauss                        | *Thunk*, hum, and a second of wobbling, swirling colors       |
 | Retro: Install Fonts                  | Install the fonts (Windows; only shown while they're missing) |
 | Retro: Open Bundled Fonts Folder      | Open the fonts, to install them by hand on Mac or Linux       |
 

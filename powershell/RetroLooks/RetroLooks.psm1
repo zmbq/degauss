@@ -3,6 +3,7 @@
 # font), so the user's settings.json is never touched. The looks are used through two commands:
 #   Set-RetroLook (look)    opens a tab with a look, in the current folder, and closes the old one
 #   Set-RetroColor (color)  recolors the current tab, like DOS's COLOR command
+# and, for fun, Invoke-RetroDegauss (degauss), which does what a CRT's degauss button did.
 # Works on Windows PowerShell 5.1 and PowerShell 7.
 
 $script:ModuleRoot = $PSScriptRoot
@@ -541,6 +542,123 @@ function Save-DefaultColor([hashtable]$Prefs, $Look) {
     }
 }
 
+# ---------- degauss ----------
+
+# Replaceable by the tests.
+$script:PlaySound = {
+    param($File)
+    $script:Player = New-Object System.Media.SoundPlayer $File
+    $script:Player.Play()   # plays in the background while the colors swirl
+}
+$script:DegaussFrames = 32
+$script:DegaussFrameMs = 40
+
+# The scheme a Retro Looks tab opened with: its profile's, in the module's copy of the fragment.
+function Get-LookScheme($Look) {
+    $fragment = Get-Content (Join-Path $script:ModuleRoot 'retro-looks.json') -Raw | ConvertFrom-Json
+    $name = $null
+    foreach ($p in $fragment.profiles) { if ($p.guid -eq $Look.guid) { $name = $p.colorScheme } }
+    foreach ($entry in $fragment.schemes) {
+        if ($entry.name -ne $name) { continue }
+        $scheme = @{}
+        foreach ($property in $entry.PSObject.Properties) { $scheme[$property.Name] = $property.Value }
+        return $scheme
+    }
+    return $null
+}
+
+# The tab's current colors, as far as the module knows them: what `color` set, else the look's own, else
+# Windows Terminal's default (Campbell). @{ Ansi = 16 colors or $null; Foreground; Background; Cursor }
+function Get-TabColors {
+    $sequence = $script:TabSequence
+    if (-not $sequence) {
+        $look = Get-CurrentLook
+        $scheme = if ($look) { Get-LookScheme $look } else { $null }
+        if ($scheme) { $sequence = Get-ColorSequence $scheme }
+    }
+    $colors = @{ Ansi = $null; Foreground = '#CCCCCC'; Background = '#0C0C0C'; Cursor = '#FFFFFF' }
+    if (-not $sequence) { return $colors }
+    $ansi = New-Object 'string[]' 16
+    foreach ($m in [regex]::Matches($sequence, '\](4;(\d+)|10|11|12);rgb:(\w\w)/(\w\w)/(\w\w)')) {
+        $hex = '#' + ($m.Groups[3].Value + $m.Groups[4].Value + $m.Groups[5].Value).ToUpper()
+        switch ($m.Groups[1].Value) {
+            '10' { $colors.Foreground = $hex }
+            '11' { $colors.Background = $hex }
+            '12' { $colors.Cursor = $hex }
+            default { $ansi[[int]$m.Groups[2].Value] = $hex; $colors.Ansi = $ansi }
+        }
+    }
+    return $colors
+}
+
+# Rotates a color's hue (the matrix of CSS's hue-rotate filter, as in vscode/degauss.js).
+function Get-RotatedColor([string]$Hex, [double]$Degrees) {
+    $rgb = ConvertTo-Rgb $Hex
+    $c = [math]::Cos($Degrees * [math]::PI / 180)
+    $s = [math]::Sin($Degrees * [math]::PI / 180)
+    return ConvertTo-HexColor @(
+        ($rgb[0] * (0.213 + 0.787 * $c - 0.213 * $s) + $rgb[1] * (0.715 - 0.715 * $c - 0.715 * $s) + $rgb[2] * (0.072 - 0.072 * $c + 0.928 * $s)),
+        ($rgb[0] * (0.213 - 0.213 * $c + 0.143 * $s) + $rgb[1] * (0.715 + 0.285 * $c + 0.14 * $s) + $rgb[2] * (0.072 - 0.072 * $c - 0.283 * $s)),
+        ($rgb[0] * (0.213 - 0.213 * $c - 0.787 * $s) + $rgb[1] * (0.715 - 0.715 * $c + 0.715 * $s) + $rgb[2] * (0.072 + 0.928 * $c + 0.072 * $s)))
+}
+
+# A fully saturated color of the given hue.
+function Get-RainbowColor([double]$Hue) {
+    $h = ((($Hue % 360) + 360) % 360) / 60
+    $x = 1 - [math]::Abs(($h % 2) - 1)
+    $rgb = @(@(1, $x, 0), @($x, 1, 0), @(0, 1, $x), @(0, $x, 1), @($x, 0, 1), @(1, 0, $x))[[int][math]::Floor($h)]
+    return ConvertTo-HexColor @(($rgb[0] * 255), ($rgb[1] * 255), ($rgb[2] * 255))
+}
+
+# One frame of the effect at time $T (0 to 1): the colors swing around the color wheel and the background
+# is washed with a sweeping rainbow tint, both dying away like the coil's current (vscode/degauss.js).
+function Get-DegaussSequence($Colors, [double]$T) {
+    $strength = (1 - $T) * (1 - $T)
+    $hue = 240 * $strength * [math]::Sin(2 * [math]::PI * 4 * $T)
+    $tint = Get-RainbowColor (720 * $T)
+    $sequence = ''
+    if ($Colors.Ansi) {
+        for ($i = 0; $i -lt 16; $i++) {
+            if ($Colors.Ansi[$i]) { $sequence += "$Esc]4;$i;$(Format-OscColor (Get-RotatedColor $Colors.Ansi[$i] $hue))$St" }
+        }
+    }
+    $sequence += "$Esc]10;$(Format-OscColor (Get-RotatedColor $Colors.Foreground $hue))$St"
+    $sequence += "$Esc]11;$(Format-OscColor (Get-MixedColor $Colors.Background $tint (0.3 * $strength)))$St"
+    $sequence += "$Esc]12;$(Format-OscColor (Get-RotatedColor $Colors.Cursor $hue))$St"
+    return $sequence
+}
+
+function Invoke-RetroDegauss {
+    <#
+    .SYNOPSIS
+    Degausses the terminal, like the button on a CRT monitor: a hum, and a second of swirling colors. Alias: degauss.
+    .DESCRIPTION
+    Works in any terminal tab. Like the real thing, it also fixes the colors: afterwards the tab is back to
+    its own colors, including ones Windows Terminal threw away (for example when you switch input languages).
+    .PARAMETER Quiet
+    Without the sound.
+    .EXAMPLE
+    degauss
+    #>
+    [CmdletBinding()]
+    param([switch]$Quiet)
+    $colors = Get-TabColors
+    # Worked out before the sound starts, so the frames keep up with it.
+    $frames = for ($i = 0; $i -lt $script:DegaussFrames; $i++) { Get-DegaussSequence $colors ($i / $script:DegaussFrames) }
+    if (-not $Quiet) {
+        try { & $script:PlaySound (Join-Path $script:ModuleRoot 'degauss.wav') } catch { Write-Verbose "No sound: $_" }
+    }
+    try {
+        foreach ($frame in $frames) {
+            Write-TerminalSequence $frame
+            if ($script:DegaussFrameMs) { Start-Sleep -Milliseconds $script:DegaussFrameMs }
+        }
+    } finally {
+        Write-TerminalSequence $script:ResetSequence
+        if ($script:TabSequence) { Write-TerminalSequence $script:TabSequence }
+    }
+}
+
 function Initialize-RetroTab {
     <#
     .SYNOPSIS
@@ -778,5 +896,6 @@ Register-ArgumentCompleter -CommandName Set-RetroColor -ParameterName Color -Scr
 
 Set-Alias -Name look -Value Set-RetroLook
 Set-Alias -Name color -Value Set-RetroColor
+Set-Alias -Name degauss -Value Invoke-RetroDegauss
 
-Export-ModuleMember -Function Install-RetroLooks, Uninstall-RetroLooks, Set-RetroLook, Set-RetroColor, Get-RetroLook, Initialize-RetroTab -Alias look, color
+Export-ModuleMember -Function Install-RetroLooks, Uninstall-RetroLooks, Set-RetroLook, Set-RetroColor, Get-RetroLook, Initialize-RetroTab, Invoke-RetroDegauss -Alias look, color, degauss

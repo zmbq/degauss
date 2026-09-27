@@ -19,6 +19,7 @@ fonts/<font-id>/        one folder per font
   LICENSE.txt           the font's license, verbatim
 tools/build.mjs         generates everything else
 tools/templates/        templates monochrome looks are generated from
+tools/degauss-sound.mjs synthesizes the degauss sound
 vscode/                 project 1: the VS Code extension (palette.js: color presets and palette math)
 powershell/             project 2: the RetroLooks PowerShell module for Windows Terminal,
   RetroLooks/             the module itself

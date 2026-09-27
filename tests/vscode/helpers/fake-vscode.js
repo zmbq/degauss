@@ -19,6 +19,8 @@ function createFakeVscode() {
     commands: {},
     context: {}, // context keys set with setContext (they drive `when` clauses in package.json)
     listeners: [],
+    editors: [], // visible text editors (see fakeEditor)
+    decorationTypes: [], // every decoration type created: { options, disposed }
   };
 
   const fire = (changed) => fake.listeners.forEach((fn) => fn({
@@ -46,6 +48,12 @@ function createFakeVscode() {
       },
     },
     window: {
+      get visibleTextEditors() { return fake.editors; },
+      createTextEditorDecorationType(options) {
+        const type = { options, disposed: false, dispose() { type.disposed = true; } };
+        fake.decorationTypes.push(type);
+        return type;
+      },
       async showQuickPick(items) {
         const label = fake.answers.shift();
         const item = items.find((i) => i.label === label);
@@ -117,4 +125,15 @@ function createFakeVscode() {
   return fake;
 }
 
-module.exports = { createFakeVscode, EXTENSION_DIR };
+// A visible editor showing lines first..last; it records what decorations were set on it.
+function fakeEditor(first, last) {
+  const editor = {
+    visibleRanges: [{ start: { line: first }, end: { line: last } }],
+    document: { lineAt: (line) => ({ range: { line } }) },
+    decorations: [], // [type, ranges] in the order they were set
+    setDecorations(type, ranges) { editor.decorations.push([type, ranges]); },
+  };
+  return editor;
+}
+
+module.exports = { createFakeVscode, fakeEditor, EXTENSION_DIR };

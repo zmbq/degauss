@@ -14,6 +14,9 @@ matching color schemes. People will often ask you to **add a new look** ("add a 
   brightness levels, like the IBM 3278); `${slot}` placeholders are filled by `phosphorPalette()`.
 - `vscode/palette.js`: the color presets and the palette math, shared by the build and the extension
   (which recolors monochrome looks at runtime with the user's chosen color).
+- Degauss (**Retro: Degauss**, `degauss`): `tools/degauss-sound.mjs` synthesizes the sound at build time
+  (no recording, so no license to track); the effect is `vscode/degauss.js` in VS Code (temporary editor
+  decorations, never settings) and `Invoke-RetroDegauss` in the module (color escape sequences).
 - `vscode/`: **project 1**, the VS Code extension. `extension.js` is hand-written; `package.json`'s
   `contributes` and all of `vscode/generated/` are produced by the build. Never edit those by hand.
   It installs fonts only; Windows Terminal is not its job.

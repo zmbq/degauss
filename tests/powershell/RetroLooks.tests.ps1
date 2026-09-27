@@ -61,6 +61,10 @@ try {
         $script:Questions = @()
         $script:AskUser = { param($q) $script:Questions += $q; if ($script:Answers.Count) { $script:Answers.Dequeue() } else { $false } }
         $script:IsTerminalInstalled = { $true }
+        # No sound and no waiting for degauss.
+        $script:Played = @()
+        $script:PlaySound = { param($f) $script:Played += $f }
+        $script:DegaussFrameMs = 0
     } $paths
     $inModule = { param($block, $arg1, $arg2) & $module $block $arg1 $arg2 }
     $fonts = & $module { Get-RetroFont }
@@ -248,6 +252,39 @@ try {
     & $clearWritten
     color amber
     Check ((& $written) -eq $amber) 'outside Retro Looks tabs, color still works as a phosphor monitor'
+
+    Write-Host '-- Invoke-RetroDegauss'
+    $reset = & $module { $script:ResetSequence }
+    $frames = & $module { $script:DegaussFrames }
+    & $clearWritten
+    degauss
+    $out = & $written
+    $played = @(& $module { $script:Played })
+    Check ($played.Count -eq 1 -and (Test-Path $played[0]) -and $played[0] -like '*degauss.wav') 'degauss plays the sound that ships with the module'
+    Check ($out.EndsWith($reset + $amber)) '... and ends with the tab back in its own color'
+    Check (([regex]::Matches($out, '\]10;')).Count -eq $frames + 1) "... after $frames frames"
+    Check (([regex]::Matches($out, '\]4;\d+;')).Count -eq 16 * ($frames + 1)) '... that swirl all 16 colors of a recolored tab'
+    $backgrounds = @([regex]::Matches($out, '\]11;(rgb:[^\x1b]+)') | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+    Check ($backgrounds.Count -gt 10) "... and tint the background ($($backgrounds.Count) shades)"
+    & $module { $script:Played = @() }
+    degauss -Quiet
+    Check (@(& $module { $script:Played }).Count -eq 0) 'degauss -Quiet makes no sound'
+    color
+    $env:WT_PROFILE_ID = $lookById['ibm-3270'].guid
+    & $clearWritten
+    degauss -Quiet
+    $out = & $written
+    Check ($out.EndsWith($reset)) 'in a tab with its default colors, degauss goes back to the profile colors'
+    $scheme = & $inModule { param($l) Get-LookScheme $l } $lookById['ibm-3270']
+    $first = & $inModule { param($c) Get-DegaussSequence $c 0 } (& $module { Get-TabColors })
+    Check ($scheme -and $first -eq (& $inModule { param($s) Get-ColorSequence $s } $scheme).Replace(
+        "]11;$(& $inModule { param($c) Format-OscColor $c } $scheme.background)", "]11;$(& $inModule { param($c) Format-OscColor (Get-MixedColor $c '#FF0000' 0.3) } $scheme.background)")) '... and swirls from the look''s own colors'
+    $env:WT_PROFILE_ID = $null; $env:RETRO_LOOK = $null
+    & $clearWritten
+    degauss -Quiet
+    $out = & $written
+    Check ($out -notmatch '\]4;' -and $out.EndsWith($reset)) 'in other tabs, degauss changes only the text and background, then resets them'
+    color amber
 
     Write-Host '-- Set-RetroLook'
     Push-Location $sandbox
