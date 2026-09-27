@@ -70,7 +70,7 @@ Reinstall the extension and run **Retro: Off**: it still remembers your original
 | Retro: Set Phosphor Color…           | Change the color of the active monochrome look                |
 | Retro: Off                            | Put your own theme, fonts and settings back                   |
 | Retro: Install Fonts                  | Install the fonts (Windows; only shown while they're missing) |
-| Retro: Open Bundled Fonts Folder      | Open the fonts, to install them by hand on macOS or Linux     |
+| Retro: Open Bundled Fonts Folder      | Open the fonts, to install them by hand on Mac or Linux       |
 
 The themes are also available on their own in the normal theme picker (`Ctrl+K Ctrl+T`), and you can use
 the fonts with any theme.
