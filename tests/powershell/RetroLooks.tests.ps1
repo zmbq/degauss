@@ -60,6 +60,7 @@ try {
         $script:Answers = New-Object System.Collections.Queue
         $script:Questions = @()
         $script:AskUser = { param($q) $script:Questions += $q; if ($script:Answers.Count) { $script:Answers.Dequeue() } else { $false } }
+        $script:IsTerminalInstalled = { $true }
     } $paths
     $inModule = { param($block, $arg1, $arg2) & $module $block $arg1 $arg2 }
     $fonts = & $module { Get-RetroFont }
@@ -89,7 +90,7 @@ try {
     Check ((@(& $questions) -join ' ') -match "isn't set up yet") 'the first look offers to set up'
     Check (-not (Test-Path $fragmentFile) -and (& $registered).Count -eq 0 -and @(& $wtCalls).Count -eq 0) 'declining leaves everything untouched'
     & $answer $true
-    $message = look apple -KeepTab 6>&1 | Out-String
+    $message = look apple -KeepTab 6>&1 | Out-String -Width 4096
     Check ((Test-Path $fragmentFile) -and (& $registered).Count -eq $fonts.Count) 'accepting installs the fonts and Terminal profiles'
     Check (@(& $wtCalls).Count -eq 0 -and $message -match 'Restart Windows Terminal') '... and asks for a Terminal restart instead of opening a tab Terminal cannot know yet'
     $asked = @(& $questions).Count
@@ -98,7 +99,7 @@ try {
     & $module { $p = Get-RetroPreference; $p.installedVersion = '0.0.1'; Save-RetroPreference $p }
     & $answer $true
     & $clearWt
-    $message = look apple -KeepTab 6>&1 | Out-String
+    $message = look apple -KeepTab 6>&1 | Out-String -Width 4096
     Check ((@(& $questions)[-1]) -match 'updated \(0\.0\.1 to ') 'after an update, look offers to refresh the setup'
     Check ((Get-Content $prefsFile -Raw | ConvertFrom-Json).installedVersion -eq (& $module { Get-ModuleVersion }) -and @(& $wtCalls).Count -eq 1) '... refreshes it and carries on'
     & $clearWt
@@ -236,24 +237,24 @@ try {
     look -Off -KeepTab
     Check ((@(& $wtCalls)[0] -join ' ') -eq "-w 0 nt -d $sandbox") 'look -Off opens a normal tab'
     & $clearWt
-    $message = look ps2 -SetAsDefault -KeepTab 6>&1 | Out-String
+    $message = look ps2 -SetAsDefault -KeepTab 6>&1 | Out-String -Width 4096
     Check ((@(& $wtCalls)[0] -join ' ') -match [regex]::Escape($lookById['ibm-ps2-vga'].guid)) 'look -SetAsDefault also switches to the look'
     Check ($message -match 'Default look: IBM PS/2 VGA' -and $message -match 'restart Windows Terminal') 'and says the Retro Looks profile needs a Terminal restart'
     $fragment = Get-Content $fragmentFile -Raw | ConvertFrom-Json
     $retro = & $retroProfile $fragment
     Check ($retro.commandline -match '-Look ibm-ps2-vga$' -and $retro.font.face -eq 'PxPlus IBM VGA 9x16' -and $retro.guid -eq $retroGuid) 'the Retro Looks profile now copies the new default, same GUID'
     Check (@($fragment.profiles | Where-Object hidden).Count -eq 0) 'Install-RetroLooks -ShowProfiles is remembered when the fragment is rewritten'
-    $message = look ps2 -Color amber -SetAsDefault -KeepTab 6>&1 | Out-String
+    $message = look ps2 -Color amber -SetAsDefault -KeepTab 6>&1 | Out-String -Width 4096
     Check ($message -match 'Default look: IBM PS/2 VGA \(amber\)' -and $message -notmatch 'restart') 'a new default color needs no restart'
     look -KeepTab
     Check ((@(& $wtCalls)[2] -join ' ') -match [regex]::Escape($lookById['ibm-ps2-vga'].guid)) 'look alone opens the default look'
 
     Write-Host '-- the Retro Looks profile'
     & $clearWritten
-    $message = Initialize-RetroTab -Look apple2e 6>&1 | Out-String
+    $message = Initialize-RetroTab -Look apple2e 6>&1 | Out-String -Width 4096
     Check ($message -match 'default look is now IBM PS/2 VGA' -and $message -match 'Apple //e') 'a tab from an outdated Retro Looks profile says a Terminal restart is pending'
     Check ($env:RETRO_LOOK -eq 'apple2e') '... and still knows it shows Apple //e'
-    $message = Initialize-RetroTab -Look ibm-ps2-vga 6>&1 | Out-String
+    $message = Initialize-RetroTab -Look ibm-ps2-vga 6>&1 | Out-String -Width 4096
     Check (-not $message.Trim()) 'an up-to-date Retro Looks tab says nothing'
     $vgaAmber = & $inModule { param($c) Get-ColorSequence (Get-RetroScheme 'luminance' (Resolve-RetroColor $c)) } 'amber'
     Check ((& $written) -like "*$vgaAmber") '... and opens in the default color'
@@ -266,12 +267,28 @@ try {
     look apple -KeepTab 6>$null
     Check (@(& $wtCalls).Count -eq 0) "in VS Code's terminal, look only prints a hint"
     $env:TERM_PROGRAM = $null; $env:WT_SESSION = $null
-    Throws { look apple -KeepTab } 'Windows Terminal' 'outside Windows Terminal, look explains why it cannot'
+    & $clearWt
+    $asked = @(& $questions).Count
+    $message = look apple -KeepTab 6>&1 | Out-String -Width 4096
+    Check ($message -match "isn't Windows Terminal" -and $message -match 'color works here') 'outside Windows Terminal, look explains (and mentions color)'
+    Check (@(& $wtCalls).Count -eq 0 -and @(& $questions).Count -eq $asked) '... without opening anything or offering setup'
+    & $module { $script:IsTerminalInstalled = { $false } }
+    $message = look apple -KeepTab 6>&1 | Out-String -Width 4096
+    Check ($message -match "isn't installed" -and $message -match 'winget install Microsoft.WindowsTerminal') 'without Windows Terminal installed, look says how to get it'
+    $message = look 3270 -SetAsDefault 6>&1 | Out-String -Width 4096
+    Check ((Get-Content $prefsFile -Raw | ConvertFrom-Json).defaultLook -eq 'ibm-3270' -and $message -match 'Default look: IBM 3270') '-SetAsDefault still works outside Windows Terminal'
+    & $module { $script:IsTerminalInstalled = { $true } }
     Pop-Location
+
+    Write-Host '-- without Windows Terminal'
+    & $module { $script:IsTerminalInstalled = { $false } }
+    $warnings = Install-RetroLooks 6>$null 3>&1 | Out-String -Width 4096
+    Check ($warnings -match 'Windows Terminal is not installed' -and (& $registered).Count -eq $fonts.Count) 'Install-RetroLooks warns, and installs the fonts anyway'
+    & $module { $script:IsTerminalInstalled = { $true } }
 
     Write-Host '-- fonts shared with the VS Code extension'
     'Retro Looks for VS Code' | Set-Content $vscodeMarker
-    $message = Uninstall-RetroLooks 6>&1 | Out-String
+    $message = Uninstall-RetroLooks 6>&1 | Out-String -Width 4096
     Check (-not (Test-Path $paths.Fragment)) 'Terminal fragment removed'
     Check (-not (Test-Path $prefsFile)) 'preferences removed'
     Check (-not (Test-Path $ownMarker)) 'own marker removed'

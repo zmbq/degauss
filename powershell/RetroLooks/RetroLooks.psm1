@@ -297,6 +297,17 @@ function Save-RetroPreference([hashtable]$Prefs) {
 
 function Get-ModuleVersion { "$($ExecutionContext.SessionState.Module.Version)" }
 
+# Is Windows Terminal installed? A script variable so the tests can pretend either way.
+$script:IsTerminalInstalled = { [bool](Get-Command wt.exe -ErrorAction SilentlyContinue) }
+
+function Write-NotInTerminal {
+    if (& $script:IsTerminalInstalled) {
+        Write-Host "look switches Windows Terminal tabs to a retro look, and this terminal isn't Windows Terminal. Open Windows Terminal and run look there. (color works here too, if this terminal supports it.)"
+    } else {
+        Write-Host "look needs Windows Terminal, which isn't installed. Get it from the Microsoft Store, or with: winget install Microsoft.WindowsTerminal"
+    }
+}
+
 # `look` needs the fonts and the Terminal profiles. Installing a module never runs its code, so on first use
 # this offers to set them up, and after an update it offers to refresh them. Returns $true when `look` can
 # go ahead right away.
@@ -522,7 +533,13 @@ function Set-RetroLook {
         Write-Host "This terminal follows the VS Code look. Use 'Retro: Choose Look...' in VS Code's Command Palette."
         return
     }
-    if (-not $Off -and -not (Confirm-RetroSetup)) { return }
+    # Only Windows Terminal can open a tab with a look. Elsewhere, explain (and still allow -SetAsDefault).
+    $inTerminal = [bool]$env:WT_SESSION
+    if (-not $inTerminal -and -not $SetAsDefault) {
+        Write-NotInTerminal
+        return
+    }
+    if ($inTerminal -and -not $Off -and -not (Confirm-RetroSetup)) { return }
 
     $target = $null
     if (-not $Off) {
@@ -549,10 +566,7 @@ function Set-RetroLook {
         }
     }
 
-    if (-not $env:WT_SESSION) {
-        if ($SetAsDefault) { return }
-        throw 'Set-RetroLook opens a Windows Terminal tab; run it inside Windows Terminal.'
-    }
+    if (-not $inTerminal) { return }   # -SetAsDefault outside Windows Terminal: saved, nothing to open
     if ($target -and $parsed) {
         New-Item -ItemType Directory -Force $script:DataDir | Out-Null
         [IO.File]::WriteAllText((Join-Path $script:DataDir 'pending-color'), "$($target.id)|$($parsed.Stored)|$((Get-Date).ToUniversalTime().Ticks)")
@@ -620,6 +634,10 @@ function Install-RetroLooks {
     Save-RetroPreference $prefs
     Write-RetroFragment $prefs
 
+    if (-not (& $script:IsTerminalInstalled)) {
+        Write-Warning 'Windows Terminal is not installed, and the looks need it. The fonts are installed anyway. Get Windows Terminal from the Microsoft Store, or with: winget install Microsoft.WindowsTerminal'
+        return
+    }
     Write-Host ''
     Write-Host 'Retro Looks installed. Close all Windows Terminal windows and reopen it. Then open the'
     Write-Host "Retro Looks profile from Terminal's menu, or type, in any PowerShell tab:"

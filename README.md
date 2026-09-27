@@ -70,7 +70,8 @@ Get-RetroLook              # list the looks
 Each tab has its own colors, so an amber and a green Apple //e can sit side by side. `look` needs a new
 tab because only a Windows Terminal profile can set a tab's font: it opens one in the current folder and
 closes the old tab (its scrollback doesn't come along; `-KeepTab` keeps it). In VS Code's terminal, `look`
-just points you to the extension, and `color` works for that session.
+just points you to the extension, and `color` works for that session. In other terminals, `look` explains
+that it needs Windows Terminal (and how to get it, if it isn't installed).
 
 **Want Terminal to start in your retro look?** Terminal's menu gets one entry, **Retro Looks**, which
 opens your default look. Choose it under Settings → Startup → Default profile. It keeps working when you
