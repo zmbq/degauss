@@ -1,0 +1,14 @@
+{
+  "name": "Apple //e Amber",
+  "order": 20,
+  "description": "Apple //e 80-column text on an amber monitor, the popular third-party alternative.",
+  "font": "pr-number-3",
+  "phosphor": "#F0A848",
+  "vscode": { "fontSize": 20, "cursorStyle": "block" },
+  "terminal": {
+    "guid": "{6c6d7d5f-deb7-4656-9369-466dcfaffcc8}",
+    "fontSize": 16,
+    "cursorShape": "filledBox",
+    "padding": "12"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "vscode-retro-build",
+  "private": true,
+  "description": "Build scripts for Retro Looks. The extension itself is in extension/.",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "package": "node tools/build.mjs && cd extension && npx --yes @vscode/vsce@3 package -o ../dist/"
+  }
+}

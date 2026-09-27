@@ -1,0 +1,109 @@
+{
+  "name": "vscode-retro",
+  "displayName": "Retro Looks",
+  "description": "Vintage computer looks for VS Code and Windows Terminal: Apple //e green and amber, IBM PS/2 VGA and IBM 3270 ISPF, with period fonts.",
+  "version": "0.1.0",
+  "publisher": "zmbq",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zmbq/vscode-retro"
+  },
+  "bugs": {
+    "url": "https://github.com/zmbq/vscode-retro/issues"
+  },
+  "homepage": "https://github.com/zmbq/vscode-retro#readme",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Themes",
+    "Other"
+  ],
+  "keywords": [
+    "retro",
+    "vintage",
+    "apple ii",
+    "apple //e",
+    "ibm",
+    "vga",
+    "3270",
+    "ispf",
+    "mainframe",
+    "green screen",
+    "amber",
+    "font",
+    "windows terminal"
+  ],
+  "galleryBanner": {
+    "color": "#000000",
+    "theme": "dark"
+  },
+  "main": "./extension.js",
+  "extensionKind": [
+    "ui"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "label": "Apple //e Green",
+        "uiTheme": "vs-dark",
+        "path": "./generated/themes/apple2e-green.json"
+      },
+      {
+        "label": "Apple //e Amber",
+        "uiTheme": "vs-dark",
+        "path": "./generated/themes/apple2e-amber.json"
+      },
+      {
+        "label": "IBM PS/2 VGA",
+        "uiTheme": "vs-dark",
+        "path": "./generated/themes/ibm-ps2-vga.json"
+      },
+      {
+        "label": "IBM 3270",
+        "uiTheme": "vs-dark",
+        "path": "./generated/themes/ibm-3270.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "retroLooks.choose",
+        "title": "Retro: Choose Look…"
+      },
+      {
+        "command": "retroLooks.apply.apple2e-green",
+        "title": "Retro: Apple //e Green"
+      },
+      {
+        "command": "retroLooks.apply.apple2e-amber",
+        "title": "Retro: Apple //e Amber"
+      },
+      {
+        "command": "retroLooks.apply.ibm-ps2-vga",
+        "title": "Retro: IBM PS/2 VGA"
+      },
+      {
+        "command": "retroLooks.apply.ibm-3270",
+        "title": "Retro: IBM 3270"
+      },
+      {
+        "command": "retroLooks.off",
+        "title": "Retro: Off (restore previous look)"
+      },
+      {
+        "command": "retroLooks.install",
+        "title": "Retro: Install Fonts and Windows Terminal Profiles"
+      },
+      {
+        "command": "retroLooks.uninstall",
+        "title": "Retro: Uninstall Fonts and Windows Terminal Profiles"
+      },
+      {
+        "command": "retroLooks.openFonts",
+        "title": "Retro: Open Bundled Fonts Folder"
+      }
+    ]
+  }
+}

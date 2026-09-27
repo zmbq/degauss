@@ -1,0 +1,9 @@
+{
+  "family": "IBM 3270",
+  "file": "3270-Regular.ttf",
+  "license": "LICENSE.txt",
+  "licenseName": "BSD 3-Clause",
+  "author": "Ricardo Bánffy and contributors (3270font)",
+  "url": "https://github.com/rbanffy/3270font",
+  "notes": "IBM 3270 terminal font, derived from the x3270 emulator font."
+}

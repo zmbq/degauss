@@ -1,0 +1,22 @@
+{
+  "background": "${bg}",
+  "foreground": "${text}",
+  "cursorColor": "${full}",
+  "selectionBackground": "${selection}",
+  "black": "${raised}",
+  "red": "${muted}",
+  "green": "${text}",
+  "yellow": "${full}",
+  "blue": "${comment}",
+  "purple": "${muted}",
+  "cyan": "${light1}",
+  "white": "${text}",
+  "brightBlack": "${dim}",
+  "brightRed": "${light1}",
+  "brightGreen": "${light1}",
+  "brightYellow": "${light2}",
+  "brightBlue": "${soft}",
+  "brightPurple": "${full}",
+  "brightCyan": "${light3}",
+  "brightWhite": "${light4}"
+}

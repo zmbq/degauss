@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.ttf binary
+*.png binary
+# Font licenses must be kept verbatim
+fonts/**/LICENSE.txt -text

@@ -1,0 +1,13 @@
+{
+  "name": "IBM 3270",
+  "order": 40,
+  "description": "IBM 3270 mainframe terminal with the default ISPF editor highlighting: green text, turquoise comments, red keywords, white strings, blue directives, yellow special characters.",
+  "font": "ibm-3270",
+  "vscode": { "fontSize": 18, "cursorStyle": "underline" },
+  "terminal": {
+    "guid": "{bc9eb1fb-6ed9-42d9-ab2d-40edbad44deb}",
+    "fontSize": 14,
+    "cursorShape": "underscore",
+    "padding": "8"
+  }
+}

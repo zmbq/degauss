@@ -1,0 +1,14 @@
+{
+  "name": "Apple //e Green",
+  "order": 10,
+  "description": "Apple //e 80-column text on a green phosphor monitor, like Apple's own Monitor II.",
+  "font": "pr-number-3",
+  "phosphor": "#40F040",
+  "vscode": { "fontSize": 20, "cursorStyle": "block" },
+  "terminal": {
+    "guid": "{c9dc3efc-3f02-40a0-b4d8-c5e7a8856706}",
+    "fontSize": 16,
+    "cursorShape": "filledBox",
+    "padding": "12"
+  }
+}

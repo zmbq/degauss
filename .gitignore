@@ -1,0 +1,12 @@
+# local scratch: original downloads and the first prototype
+.local/
+
+# build output
+dist/
+*.vsix
+node_modules/
+extension/generated/
+extension/README.md
+extension/CHANGELOG.md
+extension/LICENSE
+extension/THIRD-PARTY-NOTICES.md

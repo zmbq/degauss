@@ -1,0 +1,47 @@
+name: Release
+
+# Push a tag like v0.1.0 (matching extension/package.json "version") to publish a release.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check tag matches extension version
+        run: |
+          version=$(node -p "require('./extension/package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match extension/package.json version $version"; exit 1
+          fi
+
+      - run: node tools/build.mjs
+      - run: npx --yes @vscode/vsce@3 package -o ../dist/
+        working-directory: extension
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --title "Retro Looks $GITHUB_REF_NAME" --generate-notes \
+            dist/*.vsix dist/retro-looks-terminal.zip dist/retro-looks-terminal.zip.sha256 installer/install.ps1
+
+      - name: Publish to VS Code Marketplace
+        if: env.VSCE_PAT != ''
+        run: npx --yes @vscode/vsce@3 publish --packagePath dist/*.vsix -p "$VSCE_PAT"
+
+      - name: Publish to Open VSX
+        if: env.OVSX_PAT != ''
+        run: npx --yes ovsx publish dist/*.vsix -p "$OVSX_PAT"

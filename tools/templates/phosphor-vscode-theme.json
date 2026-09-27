@@ -1,0 +1,287 @@
+{
+  "type": "dark",
+  "semanticHighlighting": true,
+  "colors": {
+    "foreground": "${text}",
+    "focusBorder": "${comment}",
+    "selection.background": "${selection}",
+    "descriptionForeground": "${muted}",
+    "errorForeground": "${light2}",
+    "icon.foreground": "${text}",
+    "widget.shadow": "#00000080",
+    "editor.background": "${bg}",
+    "editor.foreground": "${text}",
+    "editorCursor.foreground": "${full}",
+    "editor.selectionBackground": "${selection}",
+    "editor.inactiveSelectionBackground": "${border}",
+    "editor.selectionHighlightBackground": "${border}99",
+    "editor.wordHighlightBackground": "${border}99",
+    "editor.findMatchBackground": "${comment}",
+    "editor.findMatchHighlightBackground": "${selection}99",
+    "editor.lineHighlightBackground": "${raised}",
+    "editor.lineHighlightBorder": "${raised}",
+    "editorLineNumber.foreground": "${dim}",
+    "editorLineNumber.activeForeground": "${full}",
+    "editorIndentGuide.background1": "${faint}",
+    "editorIndentGuide.activeBackground1": "${dim}",
+    "editorWhitespace.foreground": "${border}",
+    "editorBracketMatch.background": "${border}",
+    "editorBracketMatch.border": "${muted}",
+    "editorBracketHighlight.foreground1": "${full}",
+    "editorBracketHighlight.foreground2": "${light2}",
+    "editorBracketHighlight.foreground3": "${muted}",
+    "editorError.foreground": "${light2}",
+    "editorWarning.foreground": "${light1}",
+    "editorInfo.foreground": "${muted}",
+    "editorGutter.addedBackground": "${full}",
+    "editorGutter.modifiedBackground": "${muted}",
+    "editorGutter.deletedBackground": "${dim}",
+    "editorWidget.background": "${raised}",
+    "editorWidget.border": "${dim}",
+    "editorSuggestWidget.background": "${raised}",
+    "editorSuggestWidget.border": "${dim}",
+    "editorSuggestWidget.selectedBackground": "${selection}",
+    "editorSuggestWidget.highlightForeground": "${light2}",
+    "editorHoverWidget.background": "${raised}",
+    "editorHoverWidget.border": "${dim}",
+    "editorOverviewRuler.border": "${raised}",
+    "editorGroupHeader.tabsBackground": "${deep}",
+    "editorGroup.border": "${border}",
+    "scrollbarSlider.background": "${border}80",
+    "scrollbarSlider.hoverBackground": "${selection}80",
+    "scrollbarSlider.activeBackground": "${comment}80",
+    "tab.activeBackground": "${bg}",
+    "tab.activeForeground": "${full}",
+    "tab.activeBorderTop": "${full}",
+    "tab.inactiveBackground": "${deep}",
+    "tab.inactiveForeground": "${comment}",
+    "tab.border": "${deep}",
+    "activityBar.background": "${deep}",
+    "activityBar.foreground": "${full}",
+    "activityBar.inactiveForeground": "${dim}",
+    "activityBar.border": "${border}",
+    "activityBarBadge.background": "${full}",
+    "activityBarBadge.foreground": "${bg}",
+    "sideBar.background": "${deep}",
+    "sideBar.foreground": "${soft}",
+    "sideBar.border": "${border}",
+    "sideBarTitle.foreground": "${full}",
+    "sideBarSectionHeader.background": "${raised}",
+    "sideBarSectionHeader.foreground": "${full}",
+    "list.activeSelectionBackground": "${selection}",
+    "list.activeSelectionForeground": "${light2}",
+    "list.inactiveSelectionBackground": "${border}",
+    "list.hoverBackground": "${raised}",
+    "list.highlightForeground": "${light2}",
+    "list.focusOutline": "${comment}",
+    "tree.indentGuidesStroke": "${border}",
+    "gitDecoration.modifiedResourceForeground": "${light2}",
+    "gitDecoration.untrackedResourceForeground": "${light1}",
+    "gitDecoration.deletedResourceForeground": "${comment}",
+    "gitDecoration.ignoredResourceForeground": "${dim}",
+    "titleBar.activeBackground": "${deep}",
+    "titleBar.activeForeground": "${text}",
+    "titleBar.inactiveBackground": "${deep}",
+    "titleBar.inactiveForeground": "${dim}",
+    "titleBar.border": "${border}",
+    "menu.background": "${raised}",
+    "menu.foreground": "${text}",
+    "menu.selectionBackground": "${selection}",
+    "statusBar.background": "${raised}",
+    "statusBar.foreground": "${text}",
+    "statusBar.border": "${border}",
+    "statusBar.noFolderBackground": "${raised}",
+    "statusBar.debuggingBackground": "${selection}",
+    "statusBarItem.remoteBackground": "${border}",
+    "statusBarItem.remoteForeground": "${full}",
+    "panel.background": "${bg}",
+    "panel.border": "${border}",
+    "panelTitle.activeForeground": "${full}",
+    "panelTitle.inactiveForeground": "${comment}",
+    "panelTitle.activeBorder": "${full}",
+    "input.background": "${raised}",
+    "input.foreground": "${full}",
+    "input.border": "${border}",
+    "input.placeholderForeground": "${dim}",
+    "inputOption.activeBorder": "${full}",
+    "dropdown.background": "${raised}",
+    "dropdown.border": "${border}",
+    "quickInput.background": "${raised}",
+    "quickInputList.focusBackground": "${selection}",
+    "button.background": "${comment}",
+    "button.foreground": "${bg}",
+    "button.hoverBackground": "${muted}",
+    "badge.background": "${comment}",
+    "badge.foreground": "${bg}",
+    "progressBar.background": "${full}",
+    "notifications.background": "${raised}",
+    "notifications.border": "${border}",
+    "textLink.foreground": "${light2}",
+    "textLink.activeForeground": "${light4}",
+    "terminal.background": "${bg}",
+    "terminal.foreground": "${text}",
+    "terminalCursor.foreground": "${full}",
+    "terminal.selectionBackground": "${selection}",
+    "terminal.ansiBlack": "${raised}",
+    "terminal.ansiRed": "${muted}",
+    "terminal.ansiGreen": "${text}",
+    "terminal.ansiYellow": "${full}",
+    "terminal.ansiBlue": "${comment}",
+    "terminal.ansiMagenta": "${muted}",
+    "terminal.ansiCyan": "${light1}",
+    "terminal.ansiWhite": "${full}",
+    "terminal.ansiBrightBlack": "${dim}",
+    "terminal.ansiBrightRed": "${light1}",
+    "terminal.ansiBrightGreen": "${light1}",
+    "terminal.ansiBrightYellow": "${light2}",
+    "terminal.ansiBrightBlue": "${soft}",
+    "terminal.ansiBrightMagenta": "${full}",
+    "terminal.ansiBrightCyan": "${light3}",
+    "terminal.ansiBrightWhite": "${light4}"
+  },
+  "tokenColors": [
+    {
+      "settings": {
+        "foreground": "${text}"
+      }
+    },
+    {
+      "scope": [
+        "comment",
+        "punctuation.definition.comment"
+      ],
+      "settings": {
+        "foreground": "${comment}"
+      }
+    },
+    {
+      "scope": [
+        "keyword",
+        "storage",
+        "storage.type",
+        "keyword.control",
+        "keyword.operator.new",
+        "keyword.operator.expression"
+      ],
+      "settings": {
+        "foreground": "${light2}",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "scope": [
+        "string",
+        "string.template",
+        "punctuation.definition.string"
+      ],
+      "settings": {
+        "foreground": "${light1}"
+      }
+    },
+    {
+      "scope": [
+        "constant.numeric",
+        "constant.language",
+        "constant.character",
+        "support.constant"
+      ],
+      "settings": {
+        "foreground": "${light3}"
+      }
+    },
+    {
+      "scope": [
+        "entity.name.function",
+        "support.function",
+        "meta.function-call"
+      ],
+      "settings": {
+        "foreground": "${full}"
+      }
+    },
+    {
+      "scope": [
+        "entity.name.type",
+        "entity.name.class",
+        "support.type",
+        "support.class",
+        "entity.other.inherited-class"
+      ],
+      "settings": {
+        "foreground": "${light1}"
+      }
+    },
+    {
+      "scope": [
+        "variable",
+        "variable.parameter",
+        "meta.definition.variable"
+      ],
+      "settings": {
+        "foreground": "${text}"
+      }
+    },
+    {
+      "scope": [
+        "punctuation",
+        "meta.brace",
+        "keyword.operator"
+      ],
+      "settings": {
+        "foreground": "${muted}"
+      }
+    },
+    {
+      "scope": [
+        "entity.name.tag",
+        "meta.tag"
+      ],
+      "settings": {
+        "foreground": "${light2}"
+      }
+    },
+    {
+      "scope": [
+        "entity.other.attribute-name",
+        "support.type.property-name"
+      ],
+      "settings": {
+        "foreground": "${soft}"
+      }
+    },
+    {
+      "scope": [
+        "markup.heading"
+      ],
+      "settings": {
+        "foreground": "${light2}",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "scope": [
+        "markup.inserted"
+      ],
+      "settings": {
+        "foreground": "${light2}"
+      }
+    },
+    {
+      "scope": [
+        "markup.deleted"
+      ],
+      "settings": {
+        "foreground": "${comment}"
+      }
+    },
+    {
+      "scope": [
+        "invalid"
+      ],
+      "settings": {
+        "foreground": "${light4}",
+        "fontStyle": "underline"
+      }
+    }
+  ]
+}
