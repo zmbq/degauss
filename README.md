@@ -78,7 +78,8 @@ for them ([AGENTS.md](AGENTS.md)), and monochrome looks only need one color.
 
 **Font size:** pixel fonts are only sharp when every font pixel covers a whole number of screen pixels.
 On Windows, the extension reads your display scaling (and VS Code's zoom level) and picks the sharp
-size closest to the look's size, e.g. 21.333 at 150% scaling. Turn this off with the
+size closest to the look's size, e.g. 21.333 at 150% scaling, with a line height that keeps every line on
+whole pixels too. Turn this off with the
 `retroLooks.pixelPerfectFontSize` setting, or change `editor.fontSize` / `terminal.integrated.fontSize`
 after applying a look.
 

@@ -40,24 +40,45 @@ async function displayScale() {
 
 // Pixel fonts are only sharp when each font pixel covers a whole number of screen pixels, so pick the
 // size closest to the look's nominal size for which fontSize * scale is a multiple of the font's grid.
-async function fontSizeFor(look) {
+// The editor's line height matters too: VS Code rounds it to whole CSS pixels (1.35 x the font size by
+// default), which at fractional scalings can put every line half a screen pixel off the grid. So pick a
+// line height close to VS Code's default that is a whole number of screen pixels and leaves an even
+// number of spare pixels, so the text is centered on a whole pixel.
+// Returns { fontSize, lineHeight }, where lineHeight 0 means VS Code's default.
+async function sizesFor(look) {
   const target = look.vscode.fontSize;
   const grid = look.font.pixelsPerEm;
-  if (!grid || !vscode.workspace.getConfiguration('retroLooks').get('pixelPerfectFontSize')) return target;
+  if (!grid || !vscode.workspace.getConfiguration('retroLooks').get('pixelPerfectFontSize')) {
+    return { fontSize: target, lineHeight: 0 };
+  }
   const scale = await displayScale();
   const multiple = Math.max(1, Math.round((target * scale) / grid));
-  return Math.round(((multiple * grid) / scale) * 1000) / 1000;
+  const fontPixels = multiple * grid;
+  const fontSize = Math.round((fontPixels / scale) * 1000) / 1000;
+
+  const isWhole = (x) => Math.abs(x - Math.round(x)) < 1e-6;
+  const base = Math.round(1.35 * fontSize);
+  for (let offset = 0; offset <= 8; offset++) {
+    for (const lineHeight of offset ? [base - offset, base + offset] : [base]) {
+      const linePixels = lineHeight * scale;
+      if (lineHeight >= fontSize && isWhole(linePixels) && Math.round(linePixels - fontPixels) % 2 === 0) {
+        return { fontSize, lineHeight };
+      }
+    }
+  }
+  return { fontSize, lineHeight: 0 };
 }
 
 // ---------- settings ----------
 
 async function lookSettings(look) {
-  const fontSize = await fontSizeFor(look);
+  const { fontSize, lineHeight } = await sizesFor(look);
   return {
     'window.autoDetectColorScheme': false, // otherwise the OS light/dark preference overrides the theme
     'workbench.colorTheme': look.theme,
     'editor.fontFamily': look.fontFamily,
     'editor.fontSize': fontSize,
+    'editor.lineHeight': lineHeight,
     'editor.cursorStyle': look.vscode.cursorStyle,
     'terminal.integrated.fontFamily': look.fontFamily,
     'terminal.integrated.fontSize': fontSize,
@@ -65,11 +86,14 @@ async function lookSettings(look) {
   };
 }
 
+// Remembers the user's own value of each setting a look is about to change. Keys already saved keep
+// their true originals; keys not saved yet (e.g. added in a newer version while a look was active)
+// still hold the user's own value, since no look has changed them.
 async function saveOriginals(context, keys) {
-  if (context.globalState.get(SAVED_KEY)) return; // already in a retro look; keep the true originals
   const config = vscode.workspace.getConfiguration();
-  const saved = {};
+  const saved = { ...(context.globalState.get(SAVED_KEY) ?? {}) };
   for (const key of keys) {
+    if (key in saved) continue;
     const value = config.inspect(key)?.globalValue;
     saved[key] = value === undefined ? null : value;
   }
