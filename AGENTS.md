@@ -29,7 +29,7 @@ matching color schemes. People will often ask you to **add a new look** ("add a 
 - **Versions:** each product has its own. The extension's is `version` in `vscode/package.json`, the
   module's is `ModuleVersion` in `powershell/RetroLooks/RetroLooks.psd1`, each with its own changelog
   (`vscode/CHANGELOG.md`, `powershell/CHANGELOG.md`), and each is released on its own Git tag:
-  `vscode-v1.2.3` or `powershell-v1.2.3` (`.github/workflows/release.yml` checks the tag matches the
+  `vscode-v1.2.3` or `powershell-v1.2.3` (`.github/workflows/release-<product>.yml` checks the tag matches the
   version and uses the changelog entry as the release notes). Module releases are GitHub's "latest"
   release, because `install.ps1` downloads from it. When a product changes, bump its version and add a
   changelog entry.

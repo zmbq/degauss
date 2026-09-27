@@ -15,7 +15,7 @@ const generatedLooks = read('vscode', 'generated', 'looks.json');
 const moduleDir = ['dist', 'powershell', 'RetroLooks'];
 const fragment = read(...moduleDir, 'retro-looks.json');
 
-test('each product has its own version, with a changelog entry for it', () => {
+test('each product has its own version, with a changelog entry for it', async () => {
   const semver = /^\d+\.\d+\.\d+$/;
   assert.match(pkg.version, semver, 'the extension version (vscode/package.json)');
   const manifest = fs.readFileSync(path.join(root, 'powershell', 'RetroLooks', 'RetroLooks.psd1'), 'utf8');
@@ -23,9 +23,11 @@ test('each product has its own version, with a changelog entry for it', () => {
   assert.match(moduleVersion ?? '', semver, 'the module version (RetroLooks.psd1)');
   assert.strictEqual(fs.readFileSync(path.join(root, ...moduleDir, 'RetroLooks.psd1'), 'utf8'), manifest, 'the manifest ships as written');
 
-  const hasEntry = (file, v) => fs.readFileSync(path.join(root, file), 'utf8').includes(`\n## ${v}`);
-  assert(hasEntry('vscode/CHANGELOG.md', pkg.version), `vscode/CHANGELOG.md has a ## ${pkg.version} entry`);
-  assert(hasEntry('powershell/CHANGELOG.md', moduleVersion), `powershell/CHANGELOG.md has a ## ${moduleVersion} entry`);
+  // The release workflows use these entries as the release notes.
+  const { releaseNotes } = await import('../../tools/release-notes.mjs');
+  const changelog = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+  assert.doesNotThrow(() => releaseNotes(changelog('vscode/CHANGELOG.md'), pkg.version), `vscode/CHANGELOG.md has a ## ${pkg.version} entry`);
+  assert.doesNotThrow(() => releaseNotes(changelog('powershell/CHANGELOG.md'), moduleVersion), `powershell/CHANGELOG.md has a ## ${moduleVersion} entry`);
   assert(exists(...moduleDir, 'CHANGELOG.md'), 'the module ships its changelog');
 });
 
@@ -112,4 +114,13 @@ test('Retro: Install Fonts is only in the Command Palette while the fonts are mi
   assert.strictEqual(entry?.when, '!retroLooks.fontsInstalled');
   const source = fs.readFileSync(path.join(root, 'vscode', 'extension.js'), 'utf8');
   assert(source.includes("'setContext', 'retroLooks.fontsInstalled'"), 'the extension sets the context key');
+});
+
+test('release notes are the changelog entry for the version', async () => {
+  const { releaseNotes } = await import('../../tools/release-notes.mjs');
+  const changelog = '# Changelog\n\n## 1.2.10\n\n- Newer.\n\n## 1.2.1\n\n- The fix.\n- Another.\n\n## 1.2.0\n\nFirst.\n';
+  assert.strictEqual(releaseNotes(changelog, '1.2.1'), '- The fix.\n- Another.\n');
+  assert.strictEqual(releaseNotes(changelog, '1.2.0'), 'First.\n');
+  assert.throws(() => releaseNotes(changelog, '1.3.0'), /No "## 1.3.0" entry/);
+  assert.throws(() => releaseNotes('## 2.0.0\n\n## 1.0.0\n\nOld.\n', '2.0.0'), /empty/);
 });

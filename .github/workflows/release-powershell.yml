@@ -1,0 +1,42 @@
+name: Release PowerShell module
+
+# Push a tag like powershell-v1.2.3, matching ModuleVersion in powershell/RetroLooks/RetroLooks.psd1,
+# to release the module. Its release is marked "latest", because install.ps1 downloads from releases/latest.
+on:
+  push:
+    tags: ['powershell-v*']
+
+permissions:
+  contents: write
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  release:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Check the tag matches the module's version
+        run: |
+          version=$(grep -oP "ModuleVersion\s*=\s*'\K[0-9.]+" powershell/RetroLooks/RetroLooks.psd1)
+          if [ "powershell-v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match the module version $version"; exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - run: node tools/build.mjs
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node tools/release-notes.mjs powershell/CHANGELOG.md "$VERSION" > release-notes.md
+          gh release create "$GITHUB_REF_NAME" --title "RetroLooks PowerShell module $VERSION" \
+            --notes-file release-notes.md --latest \
+            dist/retro-looks-powershell.zip dist/retro-looks-powershell.zip.sha256 powershell/install.ps1

@@ -1,0 +1,54 @@
+name: Release VS Code extension
+
+# Push a tag like vscode-v1.2.3, matching "version" in vscode/package.json, to release the extension.
+# Its release is never marked "latest": that's the PowerShell module's, which install.ps1 downloads.
+on:
+  push:
+    tags: ['vscode-v*']
+
+permissions:
+  contents: write
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  release:
+    needs: tests
+    runs-on: ubuntu-latest
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Check the tag matches the extension's version
+        run: |
+          version=$(node -p "require('./vscode/package.json').version")
+          if [ "vscode-v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match the extension version $version"; exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - run: node tools/build.mjs
+      - run: npx --yes @vscode/vsce@3 package -o ../dist/
+        working-directory: vscode
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node tools/release-notes.mjs vscode/CHANGELOG.md "$VERSION" > release-notes.md
+          gh release create "$GITHUB_REF_NAME" --title "Retro Looks for VS Code $VERSION" \
+            --notes-file release-notes.md --latest=false dist/*.vsix
+
+      - name: Publish to VS Code Marketplace
+        if: env.VSCE_PAT != ''
+        run: npx --yes @vscode/vsce@3 publish --skip-duplicate --packagePath dist/*.vsix -p "$VSCE_PAT"
+
+      - name: Publish to Open VSX
+        if: env.OVSX_PAT != ''
+        run: npx --yes ovsx publish --skip-duplicate dist/*.vsix -p "$OVSX_PAT"
