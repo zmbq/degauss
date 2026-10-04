@@ -1,6 +1,6 @@
 # Changelog: Degauss PowerShell module (Windows Terminal)
 
-## 0.3.0 (in progress)
+## 0.3.0
 
 - **Renamed from RetroLooks to Degauss.** The module is now `Degauss`, and its commands are
   `Set-DegaussLook` (`look`), `Set-DegaussColor` (`color`), `Get-DegaussLook`, `Install-Degauss` and

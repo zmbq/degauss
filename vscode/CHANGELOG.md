@@ -1,6 +1,6 @@
 # Changelog: Degauss for VS Code
 
-## 0.3.0 (in progress)
+## 0.3.0
 
 - **Preview.** The first version on the Marketplace, marked as a preview: it has only been tried on a
   few setups so far. Please report problems on [GitHub](https://github.com/zmbq/degauss/issues).
