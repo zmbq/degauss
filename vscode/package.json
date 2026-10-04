@@ -6,6 +6,7 @@
   "publisher": "zmbq",
   "license": "MIT",
   "icon": "icon.png",
+  "preview": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/zmbq/degauss"

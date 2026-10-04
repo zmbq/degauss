@@ -2,6 +2,8 @@
 
 ## 0.3.0 (in progress)
 
+- **Preview.** The first version on the Marketplace, marked as a preview: it has only been tried on a
+  few setups so far. Please report problems on [GitHub](https://github.com/zmbq/degauss/issues).
 - **Renamed from Retro Looks to Degauss.** The extension is now `zmbq.degauss`; commands are
   **Degauss: …** and settings `degauss.*` (formerly `retroLooks.*`). Fonts are installed as `Degauss-*.ttf`.
 - **Degauss: Degauss!**, like the button on a CRT monitor: the relay's *thunk* and the coil's hum

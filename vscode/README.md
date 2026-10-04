@@ -4,6 +4,9 @@ Code on the machines you grew up on. Degauss gives VS Code the look of vintage c
 look sets a period-correct **font**, a matching **color theme** and the right **cursor**, in one step,
 and puts your own setup back when you're done.
 
+> **Preview.** This is the first public version, and it has only been tried on a few setups so far.
+> If something doesn't look or work right, please [open an issue](https://github.com/zmbq/degauss/issues).
+
 ![VS Code with the Apple //e look in amber](https://raw.githubusercontent.com/zmbq/degauss/main/docs/images/hero.png)
 
 ## The looks
