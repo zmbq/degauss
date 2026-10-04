@@ -58,10 +58,20 @@ irm https://github.com/zmbq/degauss/releases/latest/download/install.ps1 | iex
 ```
 
 It installs the module for both PowerShell 7 and Windows PowerShell, then runs `Install-Degauss`,
-which installs the fonts and adds the looks to Windows Terminal. (Installed the module another way, e.g.
-with `Install-Module`? The first `look` offers to run the setup for you, and after an update it offers to
-refresh it. You can always run `Install-Degauss` yourself.) Close all Windows Terminal windows and
-reopen it. Then pick **Degauss** from Terminal's profile menu, or, in any PowerShell tab:
+which installs the fonts and adds the looks to Windows Terminal.
+
+Or install it from the [PowerShell Gallery](https://www.powershellgallery.com/packages/Degauss) and run the setup yourself:
+
+```powershell
+Install-Module Degauss -Scope CurrentUser
+Install-Degauss
+```
+
+`Update-Module Degauss` gets new versions; the next `look` offers to refresh the setup after an update
+(and offers to run it at all if you skipped `Install-Degauss`).
+
+Close all Windows Terminal windows and reopen it. Then pick **Degauss** from Terminal's profile menu, or,
+in any PowerShell tab:
 
 ```powershell
 look apple                 # this tab becomes an Apple //e tab (same folder, new session)
@@ -113,7 +123,8 @@ To uninstall (fonts are kept if the VS Code extension still uses them; add `-Rem
 & ([scriptblock]::Create((irm https://github.com/zmbq/degauss/releases/latest/download/install.ps1))) -Uninstall
 ```
 
-or, to keep the module and just remove the looks and fonts, `Uninstall-Degauss`.
+or, to keep the module and just remove the looks and fonts, `Uninstall-Degauss`. If you installed it from the
+PowerShell Gallery, run `Uninstall-Degauss` and then `Uninstall-Module Degauss`.
 
 On macOS and Linux, install the fonts (see above) and pick them in your terminal's settings. Retro
 color schemes for iTerm2, Ghostty, WezTerm, kitty, Alacritty and others are on the
