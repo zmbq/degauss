@@ -36,7 +36,8 @@ matching color schemes. People will often ask you to **add a new look** ("add a 
   version and uses the changelog entry as the release notes). Module releases are GitHub's "latest"
   release, because `install.ps1` downloads from it. A suffix in the tag (`vscode-v1.2.3-rc.1`) makes a test
   release: a GitHub pre-release only, never "latest" or published to a store (`tools/release-tag.mjs`).
-  The suffix goes in the tag only; the versions themselves stay plain `1.2.3`. When a product changes, bump its version and add a
+  The suffix goes in the tag only; the versions themselves stay plain `1.2.3`. `RELEASING.md` has the release steps, including the manual
+  uploads to the Marketplace and the PowerShell Gallery. When a product changes, bump its version and add a
   changelog entry.
 - The PowerShell module repeats `vscode/palette.js`'s color math (`Get-PhosphorPalette` and friends in
   `Degauss.psm1`) to recolor tabs at runtime. Change both together; the PowerShell tests compare them
