@@ -67,7 +67,8 @@ Install-Module Degauss -Scope CurrentUser
 Install-Degauss
 ```
 
-`Update-Module Degauss` gets new versions; the next `look` offers to refresh the setup after an update
+`Install-Module` installs it only for the PowerShell you run it in, and Degauss tabs then run that
+PowerShell, so if you have PowerShell 7, install it from there. `Update-Module Degauss` gets new versions; the next `look` offers to refresh the setup after an update
 (and offers to run it at all if you skipped `Install-Degauss`).
 
 Close all Windows Terminal windows and reopen it. Then pick **Degauss** from Terminal's profile menu, or,

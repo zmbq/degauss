@@ -11,6 +11,9 @@
   picture itself wobbles, redrawn on the alternate screen so nothing on screen changes. Like the real
   thing, it also fixes the colors: the tab is back to its own colors afterwards, including ones Windows
   Terminal threw away. `-Quiet` skips the sound.
+- **On the PowerShell Gallery:** `Install-Module Degauss`, then `Install-Degauss`. Degauss tabs run
+  PowerShell 7 when it has the module, and otherwise Windows PowerShell, so a module installed from Windows
+  PowerShell works even when PowerShell 7 is installed too.
 
 ## 0.2.1
 

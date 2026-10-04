@@ -329,6 +329,22 @@ function Get-ModuleVersion { "$($ExecutionContext.SessionState.Module.Version)" 
 # Is Windows Terminal installed? A script variable so the tests can pretend either way.
 $script:IsTerminalInstalled = { [bool](Get-Command wt.exe -ErrorAction SilentlyContinue) }
 
+# Can PowerShell 7 load this version of the module? Install-Module installs for the PowerShell that runs it
+# only, so a module installed from Windows PowerShell is usually missing from PowerShell 7. A script variable
+# so the tests can pretend either way.
+$script:PwshHasModule = {
+    if ($PSVersionTable.PSEdition -eq 'Core') { return $true }
+    if (-not (Get-Command pwsh.exe -ErrorAction SilentlyContinue)) { return $false }
+    $check = "if (Get-Module -ListAvailable Degauss | Where-Object { `"`$(`$_.Version)`" -eq '$(Get-ModuleVersion)' }) { exit 0 } else { exit 1 }"
+    & pwsh.exe -NoProfile -NonInteractive -Command $check 2>$null | Out-Null
+    return $LASTEXITCODE -eq 0
+}
+
+# The PowerShell Degauss tabs run: PowerShell 7 if it has this module, otherwise Windows PowerShell.
+function Get-TabShell {
+    if (& $script:PwshHasModule) { 'pwsh.exe' } else { 'powershell.exe' }
+}
+
 function Write-NotInTerminal {
     if (& $script:IsTerminalInstalled) {
         Write-Host "look switches Windows Terminal tabs to a retro look, and this terminal isn't Windows Terminal. Open Windows Terminal and run look there. (color works here too, if this terminal supports it.)"
@@ -398,7 +414,7 @@ function Get-DefaultColorScheme($Entry, [string]$Spec, [string]$CurrentScheme, $
 }
 
 function Write-DegaussFragment([hashtable]$Prefs) {
-    $shell = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { 'pwsh.exe' } else { 'powershell.exe' }
+    $shell = Get-TabShell
     $pixelsPerEm = @{}
     foreach ($font in Get-DegaussFont) { if ($font.pixelsPerEm) { $pixelsPerEm[$font.family] = [int]$font.pixelsPerEm } }
     $fragment = Get-Content (Join-Path $script:ModuleRoot 'degauss.json') -Raw | ConvertFrom-Json

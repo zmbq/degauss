@@ -61,6 +61,9 @@ try {
         $script:Questions = @()
         $script:AskUser = { param($q) $script:Questions += $q; if ($script:Answers.Count) { $script:Answers.Dequeue() } else { $false } }
         $script:IsTerminalInstalled = { $true }
+        # Degauss tabs run PowerShell 7 unless a test says it lacks the module.
+        $script:RealPwshHasModule = $script:PwshHasModule
+        $script:PwshHasModule = { $true }
         # No sound and no waiting for degauss.
         $script:Played = @()
         $script:PlaySound = { param($f) $script:Played += $f }
@@ -133,6 +136,16 @@ try {
     Check ($visible -and $visible.name -eq 'Degauss' -and $visible.hidden -eq $false) 'one visible Degauss profile'
     Check ($visible.commandline -match 'Initialize-DegaussTab -Look apple2e$' -and $visible.font.face -eq 'PR Number 3') 'it opens the default look (Apple //e)'
     Check ((& $lookProfiles $fragment).Count -eq $looks.Count) 'plus a profile per look'
+    Check (@($fragment.profiles | Where-Object { $_.commandline -notmatch '^pwsh\.exe ' }).Count -eq 0) 'tabs run PowerShell 7 when it has the module'
+    if ($PSVersionTable.PSEdition -eq 'Core') {
+        Check (& $module { & $script:RealPwshHasModule }) '... which it always has when PowerShell 7 runs the setup'
+    }
+    & $module { $script:PwshHasModule = { $false } }
+    Install-Degauss 6>$null | Out-Null
+    $fallback = Get-Content $fragmentFile -Raw | ConvertFrom-Json
+    Check (@($fallback.profiles | Where-Object { $_.commandline -notmatch '^powershell\.exe ' }).Count -eq 0) "tabs run Windows PowerShell when PowerShell 7 doesn't have the module (e.g. Install-Module from Windows PowerShell)"
+    & $module { $script:PwshHasModule = { $true } }
+    Install-Degauss 6>$null | Out-Null
     foreach ($terminalProfile in & $lookProfiles $fragment) {
         Check ($terminalProfile.commandline -match '^(pwsh|powershell)\.exe -NoLogo -NoExit -Command Initialize-DegaussTab$') "$($terminalProfile.name): runs Initialize-DegaussTab"
         Check ($terminalProfile.hidden -eq $true) "$($terminalProfile.name): hidden"
