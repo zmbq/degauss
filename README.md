@@ -107,10 +107,6 @@ clicking. Pixel fonts are sized for your display scaling so they stay sharp (`-K
 that). Nothing needs admin rights, and your `settings.json` isn't touched: the looks are added as a
 [Terminal fragment](https://learn.microsoft.com/windows/terminal/json-fragment-extensions).
 
-Windows Terminal resets colors set this way when you switch input languages (a known Terminal bug). A tab
-re-applies its color at the next prompt, and after `color ... -SetAsDefault` and a Terminal restart, resets
-land on your default color.
-
 Programs that use exact RGB colors ("true color") bypass the palette, so `color` can't recolor those
 parts; Claude Code, for example, has an ANSI-colors-only theme in `/theme`.
 
@@ -162,6 +158,22 @@ size closest to the look's size, e.g. 21.333 at 150% scaling, with a line height
 whole pixels too. Turn this off with the
 `degauss.pixelPerfectFontSize` setting, or change `editor.fontSize` / `terminal.integrated.fontSize`
 after applying a look.
+
+## Known issues
+
+- **Windows Terminal drops a tab's colors when you switch input languages.** This is a Windows Terminal bug
+  ([microsoft/terminal#11522](https://github.com/microsoft/terminal/issues/11522)): the tab falls back
+  to its profile's color scheme, even when you switch languages in another window. Degauss re-applies the
+  tab's color at the next prompt, so while a long-running command is still going, the tab stays in the
+  wrong colors until it finishes. Run `degauss` to bring the colors back right away. After
+  `color ... -SetAsDefault` and a Terminal restart, the reset lands on your default color, so you won't
+  notice it in tabs that use their default color.
+- **macOS and Linux haven't been tested.** The VS Code extension should work there, but it has only been
+  tried on Windows. It can't install fonts there yet: run **Degauss: Open Bundled Fonts Folder** and
+  install them with your system's font installer, then restart VS Code. The PowerShell module is for
+  Windows Terminal, so it's Windows only.
+
+Found something else? Please [open an issue](https://github.com/zmbq/degauss/issues).
 
 ## Credits and licenses
 
