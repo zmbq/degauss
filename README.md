@@ -18,8 +18,14 @@ Want a Commodore 64, a classic Mac or a CP/M machine, or a VS Code version of th
 
 ## VS Code
 
-Install **Degauss** from the Marketplace (or Open VSX), then open the Command Palette
-(`Ctrl+Shift+P`) and run **Degauss: Choose Look…**, or one of the **Degauss: …** commands directly.
+Install [**Degauss** from the Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=zmbq.degauss):
+click **Install** there, or search for "Degauss" in VS Code's Extensions view (`Ctrl+Shift+X`), or run
+`code --install-extension zmbq.degauss`. It's a preview: the first version, tried on only a few setups so far,
+so please [report anything that doesn't work](https://github.com/zmbq/degauss/issues).
+
+On Windows, click **Install** when it offers to install its fonts, then quit and restart VS Code (it only
+sees new fonts after a full restart). Then open the Command Palette (`Ctrl+Shift+P`) and run
+**Degauss: Choose Look…**, or one of the **Degauss: …** commands directly.
 
 - A look sets the color theme, the editor and terminal fonts, font size and cursor.
 - **Monochrome looks** (Apple //e, IBM 3270 Monochrome) ask for their phosphor color: green, amber,
