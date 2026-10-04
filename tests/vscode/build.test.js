@@ -21,11 +21,19 @@ test('each product has its own version, with a changelog entry for it', async ()
   const manifest = fs.readFileSync(path.join(root, 'powershell', 'Degauss', 'Degauss.psd1'), 'utf8');
   const moduleVersion = manifest.match(/ModuleVersion\s*=\s*'([^']+)'/)?.[1];
   assert.match(moduleVersion ?? '', semver, 'the module version (Degauss.psd1)');
-  assert.strictEqual(fs.readFileSync(path.join(root, ...moduleDir, 'Degauss.psd1'), 'utf8'), manifest, 'the manifest ships as written');
-
   // The release workflows use these entries as the release notes.
   const { releaseNotes } = await import('../../tools/release-notes.mjs');
   const changelog = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+
+  // The manifest ships as written, except that its ReleaseNotes (shown by the PowerShell Gallery) become
+  // the version's changelog entry, as plain text.
+  const shipped = fs.readFileSync(path.join(root, ...moduleDir, 'Degauss.psd1'), 'utf8');
+  const notesLine = /^(\s*ReleaseNotes\s*=\s*)'(?:[^']|'')*'/m;
+  assert.strictEqual(shipped.replace(/^﻿/, '').replace(notesLine, '$1'), manifest.replace(notesLine, '$1'), 'only ReleaseNotes changes');
+  const notes = shipped.match(notesLine)[0].replace(/^[^']*'|'$/g, '').replace(/''/g, "'");
+  const firstLine = releaseNotes(changelog('powershell/CHANGELOG.md'), moduleVersion).split('\n')[0];
+  assert(notes.startsWith(firstLine.replace(/\*\*|`/g, '')), 'ReleaseNotes start with the changelog entry, without Markdown');
+  assert.doesNotMatch(notes, /\*\*|`/);
   assert.doesNotThrow(() => releaseNotes(changelog('vscode/CHANGELOG.md'), pkg.version), `vscode/CHANGELOG.md has a ## ${pkg.version} entry`);
   assert.doesNotThrow(() => releaseNotes(changelog('powershell/CHANGELOG.md'), moduleVersion), `powershell/CHANGELOG.md has a ## ${moduleVersion} entry`);
   assert(exists(...moduleDir, 'CHANGELOG.md'), 'the module ships its changelog');

@@ -11,6 +11,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { releaseNotes } from './release-notes.mjs';
 
 // The color math is shared with the extension, which recolors monochrome looks at runtime.
 const { PRESETS, VGA, MIN_PEAK, resolveColor, phosphorPalette, fillTemplate } = createRequire(import.meta.url)('../vscode/palette.js');
@@ -225,7 +226,15 @@ function buildPowerShell(looks, fonts) {
   const manifest = fs.readFileSync(p('powershell', 'Degauss', 'Degauss.psd1'), 'utf8');
   const version = manifest.match(/ModuleVersion\s*=\s*'(\d+\.\d+\.\d+)'/)?.[1];
   if (!version) throw new Error("Degauss.psd1 needs a ModuleVersion like '1.2.3'");
-  fs.copyFileSync(p('powershell', 'Degauss', 'Degauss.psd1'), path.join(moduleDir, 'Degauss.psd1'));
+  // The PowerShell Gallery shows ReleaseNotes as plain text: the version's changelog entry, without Markdown.
+  const changelog = fs.readFileSync(p('powershell', 'CHANGELOG.md'), 'utf8');
+  const notes = releaseNotes(changelog, version).replace(/\*\*|`/g, '').trim() +
+    '\n\nFull changelog: https://github.com/zmbq/degauss/blob/main/powershell/CHANGELOG.md';
+  const notesLine = /^(\s*ReleaseNotes\s*=\s*)'[^'\r\n]*'(?=\r?$)/m;
+  if (!notesLine.test(manifest)) throw new Error("Degauss.psd1 needs a one-line ReleaseNotes = '...'");
+  const published = manifest.replace(notesLine, (_, start) => `${start}'${notes.replace(/'/g, "''")}'`);
+  // With a BOM, so Windows PowerShell reads any non-ASCII text in the notes correctly.
+  fs.writeFileSync(path.join(moduleDir, 'Degauss.psd1'), '﻿' + published);
   fs.copyFileSync(p('powershell', 'CHANGELOG.md'), path.join(moduleDir, 'CHANGELOG.md'));
   copyFonts(fonts, path.join(moduleDir, 'fonts'));
   fs.copyFileSync(DEGAUSS_SOUND, path.join(moduleDir, 'degauss.wav'));
