@@ -1,7 +1,7 @@
 {
   "name": "degauss",
   "displayName": "Degauss: Retro Computer Looks",
-  "description": "Vintage computer looks for VS Code and Windows Terminal: Apple //e green and amber and IBM 3270 ISPF, with period fonts. Windows Terminal also gets IBM PS/2 VGA.",
+  "description": "Vintage computer looks for VS Code: the Apple //e and the IBM 3270, with their period fonts and colors.",
   "version": "0.3.0",
   "publisher": "zmbq",
   "license": "MIT",
